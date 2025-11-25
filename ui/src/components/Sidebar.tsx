@@ -8,7 +8,11 @@ const navigationItems = [
   { id: "settings", label: "Settings", icon: Settings, path: "/settings" },
 ];
 
-export const Sidebar = ({ currentView: _currentView }: { currentView?: string }) => {
+export const Sidebar = ({
+  currentView: _currentView,
+}: {
+  currentView?: string;
+}) => {
   const [theme, setTheme] = useState<"light" | "dark">("light");
   const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
@@ -34,7 +38,7 @@ export const Sidebar = ({ currentView: _currentView }: { currentView?: string })
       )}
     >
       {/* Header */}
-      <div className="flex items-center justify-between py-4.5 px-5 border-b border-sidebar-border">
+      <div className="flex items-center h-15 overflow-hidden justify-between py-4.5 px-5 border-b border-sidebar-border">
         <div
           className={cn(
             "flex items-center gap-2",
