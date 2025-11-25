@@ -24,6 +24,7 @@ const normalizeResendPayload = (
     subject: payload.subject,
     text: payload.text,
     html: payload.html,
+    raw: undefined, // Will be set by the caller
   };
 };
 
@@ -60,6 +61,22 @@ export const createResendApiServer = (store: EmailStore, port: number = 4657): E
 
       // Normalize and store the email
       const normalized = normalizeResendPayload({ ...payload, html });
+      
+      // Store the original request data (exclude react since it's already rendered)
+      const { react, ...payloadToStore } = payload;
+      normalized.raw = {
+        request: {
+          payload: payloadToStore,
+          headers: Object.keys(req.headers).reduce((acc, key) => {
+            const value = req.headers[key];
+            if (value) {
+              acc[key] = Array.isArray(value) ? value.join(', ') : String(value);
+            }
+            return acc;
+          }, {} as Record<string, string>),
+        },
+      };
+      
       const email = addEmail(store, normalized);
 
       // Return Resend-compatible response

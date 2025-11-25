@@ -13,6 +13,11 @@ export type Email = {
   raw?: {
     headers?: Record<string, string>;
     mime?: string;
+    // For Resend API emails
+    request?: {
+      payload?: Record<string, unknown>;
+      headers?: Record<string, string>;
+    };
   };
 };
 

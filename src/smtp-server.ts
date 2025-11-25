@@ -12,20 +12,57 @@ const normalizeSmtpMail = (parsed: ParsedMail): Omit<import('./types.js').Email,
     return addresses.map((addr) => addr.address);
   };
 
-  // Convert headers to a plain object
+  // Convert headers to a plain object with all values as strings
+  const normalizeHeaderValue = (value: unknown): string => {
+    if (value === null || value === undefined) {
+      return String(value);
+    }
+    if (typeof value === 'string') {
+      return value;
+    }
+    if (Array.isArray(value)) {
+      return value.map(v => normalizeHeaderValue(v)).join(', ');
+    }
+    if (typeof value === 'object') {
+      // Handle mailparser address objects
+      const obj = value as Record<string, unknown>;
+      if (obj.address && typeof obj.address === 'string') {
+        return obj.name ? `${obj.name} <${obj.address}>` : obj.address;
+      }
+      if (obj.value !== undefined) {
+        return normalizeHeaderValue(obj.value);
+      }
+      if (obj.text && typeof obj.text === 'string') {
+        return obj.text;
+      }
+      // For other objects, try JSON stringify
+      try {
+        return JSON.stringify(value);
+      } catch {
+        return String(value);
+      }
+    }
+    return String(value);
+  };
+
   const headersObj: Record<string, string> = {};
   if (parsed.headers) {
     // mailparser headers can be a Map or an object
     if (parsed.headers instanceof Map) {
       parsed.headers.forEach((value, key) => {
-        headersObj[key] = Array.isArray(value) ? value.join(', ') : String(value);
+        headersObj[key] = normalizeHeaderValue(value);
       });
     } else if (typeof parsed.headers.getMap === 'function') {
       // Fallback for older API
-      Object.assign(headersObj, parsed.headers.getMap());
+      const headerMap = parsed.headers.getMap();
+      for (const [key, value] of Object.entries(headerMap)) {
+        headersObj[key] = normalizeHeaderValue(value);
+      }
     } else {
       // Headers might already be an object
-      Object.assign(headersObj, parsed.headers);
+      for (const [key, value] of Object.entries(parsed.headers)) {
+        headersObj[key] = normalizeHeaderValue(value);
+      }
     }
   }
 

@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { EmailDetail } from '../components/EmailDetail';
-import { fetchEmail, deleteEmail } from '../api';
-import type { Email } from '../types';
+import { useState, useEffect } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+
+import { EmailDetail } from "@/components/EmailDetail";
+import { fetchEmail } from "@/api";
+import type { Email } from "@/types";
 
 export const EmailDetailPage = () => {
   const { id } = useParams<{ id: string }>();
@@ -13,7 +14,7 @@ export const EmailDetailPage = () => {
 
   useEffect(() => {
     if (!id) {
-      navigate('/emails');
+      navigate("/emails");
       return;
     }
 
@@ -24,9 +25,10 @@ export const EmailDetailPage = () => {
         const data = await fetchEmail(id);
         setEmail(data);
       } catch (err) {
-        const message = err instanceof Error ? err.message : 'Failed to load email';
+        const message =
+          err instanceof Error ? err.message : "Failed to load email";
         setError(message);
-        console.error('Failed to load email:', err);
+        console.error("Failed to load email:", err);
       } finally {
         setLoading(false);
       }
@@ -36,19 +38,7 @@ export const EmailDetailPage = () => {
   }, [id, navigate]);
 
   const handleBack = () => {
-    navigate('/emails');
-  };
-
-  const handleDelete = async (emailId: string) => {
-    try {
-      setError(null);
-      await deleteEmail(emailId);
-      navigate('/emails');
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to delete email';
-      setError(message);
-      console.error('Failed to delete email:', err);
-    }
+    navigate("/emails");
   };
 
   if (loading) {
@@ -74,7 +64,7 @@ export const EmailDetailPage = () => {
 
   return (
     <>
-      <EmailDetail email={email} onBack={handleBack} onDelete={handleDelete} />
+      <EmailDetail email={email} onBack={handleBack} />
       {error && (
         <div className="fixed bottom-4 right-4 bg-destructive text-destructive-foreground px-4 py-3 rounded-md shadow-lg max-w-md">
           {error}
@@ -83,4 +73,3 @@ export const EmailDetailPage = () => {
     </>
   );
 };
-

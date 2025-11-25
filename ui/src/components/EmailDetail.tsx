@@ -2,36 +2,24 @@ import { useState } from "react";
 import {
   Copy,
   Check,
-  Trash2,
   ArrowLeft,
   Code,
   MoreHorizontal,
   Mail,
-  Send,
-  CheckCircle,
 } from "lucide-react";
-import { Button } from "./ui/button";
-import { Badge } from "./ui/badge";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "./ui/tabs";
-import type { Email } from "../types";
+
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { API_BADGE_CLASSES, SMTP_BADGE_CLASSES } from "@/lib/constants";
+
+import type { Email } from "@/types";
 
 interface EmailDetailProps {
   email: Email | null;
   onBack: () => void;
   onDelete?: (id: string) => void;
 }
-
-const formatDateTime = (timestamp: number): string => {
-  const date = new Date(timestamp);
-  const month = date.toLocaleString("default", { month: "short" });
-  const day = date.getDate();
-  const hours = date.getHours();
-  const minutes = date.getMinutes();
-  const ampm = hours >= 12 ? "PM" : "AM";
-  const displayHours = hours % 12 || 12;
-  const displayMinutes = minutes.toString().padStart(2, "0");
-  return `${month} ${day}, ${displayHours}:${displayMinutes} ${ampm}`;
-};
 
 const copyToClipboard = async (text: string): Promise<boolean> => {
   try {
@@ -42,7 +30,131 @@ const copyToClipboard = async (text: string): Promise<boolean> => {
   }
 };
 
-export const EmailDetail = ({ email, onBack, onDelete }: EmailDetailProps) => {
+/**
+ * Formats headers for display, converting objects and arrays to readable strings
+ */
+const formatHeaders = (
+  headers: Record<string, unknown> | undefined
+): string => {
+  if (!headers) return "{}";
+
+  const formatted: Record<string, string> = {};
+
+  for (const [key, value] of Object.entries(headers)) {
+    if (value === null || value === undefined) {
+      formatted[key] = String(value);
+    } else if (Array.isArray(value)) {
+      formatted[key] = value.map((v) => formatValue(v)).join(", ");
+    } else if (typeof value === "object") {
+      // Handle objects - try to extract meaningful data
+      formatted[key] = formatValue(value);
+    } else {
+      formatted[key] = String(value);
+    }
+  }
+
+  return JSON.stringify(formatted, null, 2);
+};
+
+/**
+ * Formats a single header value, handling objects and arrays
+ */
+const formatValue = (value: unknown): string => {
+  if (value === null || value === undefined) {
+    return String(value);
+  }
+
+  if (typeof value === "string") {
+    return value;
+  }
+
+  if (typeof value === "number" || typeof value === "boolean") {
+    return String(value);
+  }
+
+  if (Array.isArray(value)) {
+    return value.map((v) => formatValue(v)).join(", ");
+  }
+
+  if (typeof value === "object") {
+    // Try to extract meaningful properties from common email header objects
+    const obj = value as Record<string, unknown>;
+
+    // Handle address objects (common in email headers)
+    if (obj.address && typeof obj.address === "string") {
+      const name = obj.name ? `${obj.name} <${obj.address}>` : obj.address;
+      return name;
+    }
+
+    // Handle objects with value property (mailparser format)
+    if (obj.value !== undefined) {
+      if (Array.isArray(obj.value)) {
+        return obj.value
+          .map((v: unknown) => {
+            if (typeof v === "object" && v !== null && "address" in v) {
+              const addr = v as { address: string; name?: string };
+              return addr.name
+                ? `${addr.name} <${addr.address}>`
+                : addr.address;
+            }
+            return formatValue(v);
+          })
+          .join(", ");
+      }
+      return formatValue(obj.value);
+    }
+
+    // Handle mailparser header objects that might have text property
+    if (obj.text && typeof obj.text === "string") {
+      return obj.text;
+    }
+
+    // Handle objects with html property
+    if (obj.html && typeof obj.html === "string") {
+      return obj.html;
+    }
+
+    // Try to extract all string properties and join them
+    const stringProps: string[] = [];
+    for (const [k, v] of Object.entries(obj)) {
+      if (typeof v === "string") {
+        stringProps.push(`${k}: ${v}`);
+      } else if (typeof v === "object" && v !== null) {
+        // Recursively format nested objects
+        stringProps.push(`${k}: ${formatValue(v)}`);
+      }
+    }
+    if (stringProps.length > 0) {
+      return stringProps.join("; ");
+    }
+
+    // For other objects, try to stringify
+    try {
+      const stringified = JSON.stringify(value, null, 2);
+      // If JSON.stringify returns something meaningful (not just {}), use it
+      if (stringified && stringified !== "{}" && stringified !== "[]") {
+        return stringified;
+      }
+    } catch {
+      // Fall through to final return
+    }
+
+    // Last resort: try to find any meaningful string representation
+    // Check if object has a toString method that's not the default
+    if (value.toString && value.toString !== Object.prototype.toString) {
+      const str = value.toString();
+      if (str && str !== "[object Object]") {
+        return str;
+      }
+    }
+  }
+
+  // Final fallback - but this should rarely be hit
+  const str = String(value);
+  return str === "[object Object]" ? JSON.stringify(value) : str;
+};
+
+export const EmailDetail = ({ email, onBack }: EmailDetailProps) => {
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("preview");
 
@@ -56,17 +168,34 @@ export const EmailDetail = ({ email, onBack, onDelete }: EmailDetailProps) => {
     }
   };
 
-  const handleDelete = () => {
-    if (onDelete && confirm("Are you sure you want to delete this email?")) {
-      onDelete(email.id);
-      onBack();
+  const getContentForActiveTab = (): string | null => {
+    switch (activeTab) {
+      case "preview":
+        return email.html || email.text || null;
+      case "text":
+        return email.text || null;
+      case "html":
+        return email.html || null;
+      case "request":
+        // Request tab has separate copy buttons, so main copy button is disabled
+        return null;
+      default:
+        return null;
     }
+  };
+
+  const hasContentForActiveTab = (): boolean => {
+    // Request tab has separate copy buttons, so main copy button is disabled
+    if (activeTab === "request") {
+      return false;
+    }
+    return getContentForActiveTab() !== null;
   };
 
   const isResend = email.source === "resend";
 
   return (
-    <div className="flex flex-col h-full overflow-y-auto">
+    <div className="flex flex-col h-full">
       {/* Header */}
       <div className="border-b p-6">
         <div className="flex items-center justify-between mb-6">
@@ -89,27 +218,19 @@ export const EmailDetail = ({ email, onBack, onDelete }: EmailDetailProps) => {
         </div>
 
         <div className="flex items-center gap-4">
-          <div className="h-16 w-16 rounded-lg border-2 border-green-600 dark:border-green-500 bg-green-600/10 dark:bg-green-500/10 flex items-center justify-center">
-            {isResend ? (
-              <Mail className="h-8 w-8 text-green-600 dark:text-green-500" />
-            ) : (
-              <Send className="h-8 w-8 text-green-600 dark:text-green-500" />
-            )}
+          <div className="size-12 rounded-lg inline-flex select-none items-center font-medium truncate bg-zinc-300/30 text-zinc-600 dark:bg-zinc-700/30 dark:text-zinc-400 border border-transparent mx-auto justify-center">
+            <Mail className="h-6 w-6" />
           </div>
           <div className="flex-1">
-            <div className="flex items-center gap-3 mb-2">
-              <h1 className="text-2xl font-bold">{email.to[0]}</h1>
-              <Badge
-                variant="outline"
-                className={
-                  isResend
-                    ? "backdrop-blur-sm bg-blue-500/10 dark:bg-blue-500/20 border-blue-500/30 dark:border-blue-500/40 text-blue-600 dark:text-blue-400 hover:bg-blue-500/20 dark:hover:bg-blue-500/30"
-                    : "backdrop-blur-sm bg-purple-500/10 dark:bg-purple-500/20 border-purple-500/30 dark:border-purple-500/40 text-purple-600 dark:text-purple-400 hover:bg-purple-500/20 dark:hover:bg-purple-500/30"
-                }
-              >
-                {isResend ? "API" : "SMTP"}
-              </Badge>
+            <div className="flex">
+              <h1 className="text-xl font-bold">{email.to[0]}</h1>
             </div>
+            <Badge
+              variant="outline"
+              className={isResend ? API_BADGE_CLASSES : SMTP_BADGE_CLASSES}
+            >
+              {isResend ? "API" : "SMTP"}
+            </Badge>
           </div>
         </div>
       </div>
@@ -151,79 +272,42 @@ export const EmailDetail = ({ email, onBack, onDelete }: EmailDetailProps) => {
         </div>
       </div>
 
-      {/* Email Events */}
-      <div className="border-b p-6 bg-muted/30 relative">
-        <div
-          className="absolute inset-0 opacity-20"
-          style={{
-            backgroundImage:
-              "radial-gradient(circle, currentColor 1px, transparent 1px)",
-            backgroundSize: "20px 20px",
-            backgroundPosition: "0 0",
-          }}
-        />
-        <div className="relative">
-          <h2 className="text-sm font-medium text-muted-foreground mb-4">
-            EMAIL EVENTS
-          </h2>
-          <div className="flex items-center justify-center gap-8">
-            {/* Sent Event */}
-            <div className="flex flex-col items-center gap-2">
-              <div className="h-10 w-10 rounded-full bg-muted border-2 border-border flex items-center justify-center">
-                <Send className="h-5 w-5 text-muted-foreground" />
-              </div>
-              <div className="text-center">
-                <div className="text-sm text-muted-foreground">Sent</div>
-                <div className="text-sm font-medium">
-                  {formatDateTime(email.createdAt)}
-                </div>
-              </div>
-            </div>
-
-            {/* Connection Line */}
-            <div className="flex-1 max-w-90 h-0.5 border-t-2 border-dashed border-border"></div>
-
-            {/* Delivered Event */}
-            <div className="flex flex-col items-center gap-2">
-              <div className="h-10 w-10 rounded-full bg-green-600 dark:bg-green-500 flex items-center justify-center">
-                <CheckCircle className="h-5 w-5 text-white" />
-              </div>
-              <div className="text-center">
-                <div className="text-sm text-green-600 dark:text-green-500 font-medium">
-                  Delivered
-                </div>
-                <div className="text-sm font-medium">
-                  {formatDateTime(email.createdAt)}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
       {/* Content Tabs */}
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex-1 flex flex-col h-full">
         <div className="px-6 pt-6 flex items-center justify-between">
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList>
               <TabsTrigger value="preview">Preview</TabsTrigger>
               <TabsTrigger value="text">Plain Text</TabsTrigger>
               <TabsTrigger value="html">HTML</TabsTrigger>
-              <TabsTrigger value="insights">Insights</TabsTrigger>
+              <TabsTrigger value="request">Request</TabsTrigger>
             </TabsList>
           </Tabs>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() =>
-              handleCopy(email.html || email.text || "", "content")
-            }
-          >
-            <Copy className="h-4 w-4" />
-          </Button>
+          {activeTab !== "request" && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => {
+                const content = getContentForActiveTab();
+                if (content) {
+                  handleCopy(content, "content");
+                }
+              }}
+              disabled={!hasContentForActiveTab()}
+              title={
+                hasContentForActiveTab() ? "Copy content" : "No content to copy"
+              }
+            >
+              {copiedId === "content" ? (
+                <Check className="h-4 w-4 text-green-600" />
+              ) : (
+                <Copy className="h-4 w-4" />
+              )}
+            </Button>
+          )}
         </div>
 
-        <div className="flex-1 overflow-y-auto p-6">
+        <div className="flex-1 p-6">
           <Tabs
             value={activeTab}
             onValueChange={setActiveTab}
@@ -231,7 +315,7 @@ export const EmailDetail = ({ email, onBack, onDelete }: EmailDetailProps) => {
           >
             <TabsContent value="preview" className="mt-0 h-full">
               {email.html ? (
-                <div className="bg-white dark:bg-gray-900 rounded-lg border h-full overflow-hidden">
+                <div className="bg-white dark:bg-zinc-900 rounded-lg border h-full overflow-hidden">
                   <iframe
                     srcDoc={email.html}
                     className="w-full h-full border-0"
@@ -243,7 +327,7 @@ export const EmailDetail = ({ email, onBack, onDelete }: EmailDetailProps) => {
                   />
                 </div>
               ) : email.text ? (
-                <div className="bg-white dark:bg-gray-900 rounded-lg border p-6 h-full overflow-auto">
+                <div className="bg-white dark:bg-zinc-900 rounded-lg border p-6 h-full overflow-auto">
                   <pre className="whitespace-pre-wrap font-sans text-sm">
                     {email.text}
                   </pre>
@@ -280,20 +364,144 @@ export const EmailDetail = ({ email, onBack, onDelete }: EmailDetailProps) => {
                 </div>
               )}
             </TabsContent>
-            <TabsContent value="insights" className="mt-0 h-full">
+            <TabsContent value="request" className="mt-0 h-full">
               <div className="space-y-4">
-                <div className="border rounded p-4">
-                  <h3 className="font-semibold mb-2">Email Headers</h3>
-                  <pre className="whitespace-pre-wrap border rounded p-4 bg-background font-mono text-xs overflow-auto">
-                    {JSON.stringify(email.raw?.headers || {}, null, 2)}
-                  </pre>
-                </div>
-                {email.raw?.mime && (
-                  <div className="border rounded p-4">
-                    <h3 className="font-semibold mb-2">Raw MIME</h3>
-                    <pre className="whitespace-pre-wrap border rounded p-4 bg-background font-mono text-xs overflow-auto">
-                      {email.raw.mime}
-                    </pre>
+                {email.source === "resend" && email.raw?.request ? (
+                  <>
+                    {/* Resend API Request Payload */}
+                    {email.raw.request.payload && (
+                      <div className="border rounded p-4">
+                        <div className="flex items-center justify-between mb-2">
+                          <h3 className="font-semibold">Request Payload</h3>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => {
+                              const payload = JSON.stringify(
+                                email.raw?.request?.payload,
+                                null,
+                                2
+                              );
+                              if (payload) {
+                                handleCopy(payload, "payload");
+                              }
+                            }}
+                            disabled={!email.raw?.request?.payload}
+                            title="Copy payload"
+                          >
+                            {copiedId === "payload" ? (
+                              <Check className="h-4 w-4 text-green-600" />
+                            ) : (
+                              <Copy className="h-4 w-4" />
+                            )}
+                          </Button>
+                        </div>
+                        <pre className="whitespace-pre-wrap border rounded p-4 bg-background font-mono text-xs overflow-auto">
+                          {JSON.stringify(email.raw.request.payload, null, 2)}
+                        </pre>
+                      </div>
+                    )}
+                    {/* Resend API Request Headers */}
+                    {email.raw.request.headers && (
+                      <div className="border rounded p-4">
+                        <div className="flex items-center justify-between mb-2">
+                          <h3 className="font-semibold">Request Headers</h3>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => {
+                              const headers = formatHeaders(
+                                email.raw?.request?.headers
+                              );
+                              if (headers) {
+                                handleCopy(headers, "request-headers");
+                              }
+                            }}
+                            disabled={!email.raw?.request?.headers}
+                            title="Copy headers"
+                          >
+                            {copiedId === "request-headers" ? (
+                              <Check className="h-4 w-4 text-green-600" />
+                            ) : (
+                              <Copy className="h-4 w-4" />
+                            )}
+                          </Button>
+                        </div>
+                        <pre className="whitespace-pre-wrap border rounded p-4 bg-background font-mono text-xs overflow-auto">
+                          {formatHeaders(email.raw.request.headers)}
+                        </pre>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    {/* SMTP Email Headers */}
+                    {email.raw?.headers && (
+                      <div className="border rounded p-4">
+                        <div className="flex items-center justify-between mb-2">
+                          <h3 className="font-semibold">Email Headers</h3>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => {
+                              const headers = formatHeaders(email.raw?.headers);
+                              if (headers) {
+                                handleCopy(headers, "headers");
+                              }
+                            }}
+                            disabled={!email.raw?.headers}
+                            title="Copy headers"
+                          >
+                            {copiedId === "headers" ? (
+                              <Check className="h-4 w-4 text-green-600" />
+                            ) : (
+                              <Copy className="h-4 w-4" />
+                            )}
+                          </Button>
+                        </div>
+                        <pre className="whitespace-pre-wrap border rounded p-4 bg-background font-mono text-xs overflow-auto">
+                          {formatHeaders(email.raw.headers)}
+                        </pre>
+                      </div>
+                    )}
+                    {/* SMTP Raw MIME */}
+                    {email.raw?.mime && (
+                      <div className="border rounded p-4">
+                        <div className="flex items-center justify-between mb-2">
+                          <h3 className="font-semibold">Raw MIME</h3>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => {
+                              if (email.raw?.mime) {
+                                handleCopy(email.raw.mime, "mime");
+                              }
+                            }}
+                            disabled={!email.raw?.mime}
+                            title="Copy MIME"
+                          >
+                            {copiedId === "mime" ? (
+                              <Check className="h-4 w-4 text-green-600" />
+                            ) : (
+                              <Copy className="h-4 w-4" />
+                            )}
+                          </Button>
+                        </div>
+                        <pre className="whitespace-pre-wrap border rounded p-4 bg-background font-mono text-xs overflow-auto">
+                          {email.raw.mime}
+                        </pre>
+                      </div>
+                    )}
+                  </>
+                )}
+                {email.source === "resend" && !email.raw?.request && (
+                  <div className="text-muted-foreground p-4 border rounded">
+                    No request data available
+                  </div>
+                )}
+                {email.source === "smtp" && !email.raw?.headers && !email.raw?.mime && (
+                  <div className="text-muted-foreground p-4 border rounded">
+                    No raw data available
                   </div>
                 )}
               </div>

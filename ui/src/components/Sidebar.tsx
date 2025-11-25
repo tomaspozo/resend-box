@@ -34,16 +34,13 @@ export const Sidebar = ({ currentView }: { currentView?: string }) => {
       )}
     >
       {/* Header */}
-      <div className="flex items-center justify-between py-3.5 px-2 border-b border-sidebar-border">
+      <div className="flex items-center justify-between py-4.5 px-5 border-b border-sidebar-border">
         <div
           className={cn(
             "flex items-center gap-2",
             collapsed && "justify-center"
           )}
         >
-          <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center text-muted-foreground font-semibold text-sm">
-            R
-          </div>
           {!collapsed && (
             <span className="font-semibold text-sidebar-foreground">
               Resend Sandbox
