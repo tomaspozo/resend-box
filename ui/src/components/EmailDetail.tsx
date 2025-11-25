@@ -166,7 +166,7 @@ export const EmailDetail = ({ email, onBack, onDelete }: EmailDetailProps) => {
           <h2 className="text-sm font-medium text-muted-foreground mb-4">
             EMAIL EVENTS
           </h2>
-          <div className="flex items-center gap-8">
+          <div className="flex items-center justify-center gap-8">
             {/* Sent Event */}
             <div className="flex flex-col items-center gap-2">
               <div className="h-10 w-10 rounded-full bg-muted border-2 border-border flex items-center justify-center">
@@ -181,7 +181,7 @@ export const EmailDetail = ({ email, onBack, onDelete }: EmailDetailProps) => {
             </div>
 
             {/* Connection Line */}
-            <div className="flex-1 h-0.5 border-t-2 border-dashed border-border"></div>
+            <div className="flex-1 max-w-90 h-0.5 border-t-2 border-dashed border-border"></div>
 
             {/* Delivered Event */}
             <div className="flex flex-col items-center gap-2">
@@ -203,7 +203,7 @@ export const EmailDetail = ({ email, onBack, onDelete }: EmailDetailProps) => {
 
       {/* Content Tabs */}
       <div className="flex-1 flex flex-col overflow-hidden">
-        <div className="border-b px-6 pt-6 flex items-center justify-between">
+        <div className="px-6 pt-6 flex items-center justify-between">
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList>
               <TabsTrigger value="preview">Preview</TabsTrigger>
@@ -231,13 +231,14 @@ export const EmailDetail = ({ email, onBack, onDelete }: EmailDetailProps) => {
           >
             <TabsContent value="preview" className="mt-0 h-full">
               {email.html ? (
-                <div className="bg-white dark:bg-gray-900 rounded-lg border p-6 h-full overflow-auto">
-                  <div
-                    className="prose max-w-none email-content"
-                    dangerouslySetInnerHTML={{ __html: email.html }}
+                <div className="bg-white dark:bg-gray-900 rounded-lg border h-full overflow-hidden">
+                  <iframe
+                    srcDoc={email.html}
+                    className="w-full h-full border-0"
+                    sandbox="allow-same-origin"
+                    title="Email preview"
                     style={{
-                      fontFamily: "system-ui, -apple-system, sans-serif",
-                      lineHeight: "1.6",
+                      display: "block",
                     }}
                   />
                 </div>
