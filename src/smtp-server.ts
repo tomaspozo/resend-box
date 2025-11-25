@@ -1,5 +1,5 @@
 import { SMTPServer, type SMTPServerOptions } from 'smtp-server';
-import { simpleParser, type ParsedMail } from 'mailparser';
+import { simpleParser, type ParsedMail, type AddressObject } from 'mailparser';
 import type { EmailStore } from './types.js';
 import { addEmail } from './store.js';
 
@@ -7,9 +7,15 @@ import { addEmail } from './store.js';
  * Normalizes a parsed SMTP mail into our internal Email format
  */
 const normalizeSmtpMail = (parsed: ParsedMail): Omit<import('./types.js').Email, 'id' | 'createdAt'> => {
-  const normalizeAddresses = (addresses?: Array<{ address: string }>): string[] => {
+  const normalizeAddresses = (addresses?: Array<{ address?: string }>): string[] => {
     if (!addresses) return [];
-    return addresses.map((addr) => addr.address);
+    return addresses.map((addr) => addr.address || '').filter(Boolean);
+  };
+  
+  const normalizeAddressObject = (addrObj?: AddressObject | AddressObject[]): string[] => {
+    if (!addrObj) return [];
+    const objects = Array.isArray(addrObj) ? addrObj : [addrObj];
+    return objects.flatMap(obj => normalizeAddresses(obj.value));
   };
 
   // Convert headers to a plain object with all values as strings
@@ -49,12 +55,12 @@ const normalizeSmtpMail = (parsed: ParsedMail): Omit<import('./types.js').Email,
   if (parsed.headers) {
     // mailparser headers can be a Map or an object
     if (parsed.headers instanceof Map) {
-      parsed.headers.forEach((value, key) => {
+      parsed.headers.forEach((value: unknown, key: string) => {
         headersObj[key] = normalizeHeaderValue(value);
       });
-    } else if (typeof parsed.headers.getMap === 'function') {
+    } else if (typeof (parsed.headers as any).getMap === 'function') {
       // Fallback for older API
-      const headerMap = parsed.headers.getMap();
+      const headerMap = (parsed.headers as any).getMap();
       for (const [key, value] of Object.entries(headerMap)) {
         headersObj[key] = normalizeHeaderValue(value);
       }
@@ -69,10 +75,10 @@ const normalizeSmtpMail = (parsed: ParsedMail): Omit<import('./types.js').Email,
   return {
     source: 'smtp',
     from: parsed.from?.value[0]?.address || 'unknown@localhost',
-    to: normalizeAddresses(parsed.to?.value),
-    cc: parsed.cc ? normalizeAddresses(parsed.cc.value) : undefined,
-    bcc: parsed.bcc ? normalizeAddresses(parsed.bcc.value) : undefined,
-    replyTo: parsed.replyTo ? normalizeAddresses(parsed.replyTo.value) : undefined,
+    to: normalizeAddressObject(parsed.to),
+    cc: parsed.cc ? normalizeAddressObject(parsed.cc) : undefined,
+    bcc: parsed.bcc ? normalizeAddressObject(parsed.bcc) : undefined,
+    replyTo: parsed.replyTo ? normalizeAddressObject(parsed.replyTo) : undefined,
     subject: parsed.subject || '(no subject)',
     text: parsed.text || undefined,
     html: parsed.html || undefined,
@@ -113,7 +119,7 @@ export const createSmtpServer = (
             callback(err);
           }
         })
-        .catch((error) => {
+        .catch((error: unknown) => {
           console.error('❌ Error parsing SMTP email:', error);
           // Log error but don't crash - return error to client
           const err = error instanceof Error ? error : new Error(String(error));
@@ -124,7 +130,7 @@ export const createSmtpServer = (
       // Log connection attempts
       const remoteAddress = session.remoteAddress || 'unknown';
       const remotePort = session.remotePort || 'unknown';
-      const hostname = session.hostname || session.remoteAddress || 'unknown';
+      const hostname = (session as any).hostname || session.remoteAddress || 'unknown';
       console.log(`🔌 SMTP connection attempt from ${remoteAddress}:${remotePort} (${hostname})`);
       
       // Log session details for debugging
@@ -132,7 +138,7 @@ export const createSmtpServer = (
         id: session.id,
         remoteAddress: session.remoteAddress,
         remotePort: session.remotePort,
-        hostname: session.hostname,
+        hostname: (session as any).hostname,
         clientHostname: session.clientHostname,
       });
       
@@ -186,25 +192,6 @@ export const createSmtpServer = (
     console.log('📬 SMTP server closed');
   });
 
-  // Log connection events - these might not fire if using onConnect callback
-  // But we'll keep them for additional error tracking
-  server.on('connection', (connection) => {
-    const remoteAddress = connection.remoteAddress || 'unknown';
-    console.log(`✅ SMTP connection event fired from ${remoteAddress}`);
-    
-    connection.on('error', (error: Error) => {
-      console.error(`❌ SMTP connection error from ${remoteAddress}:`, error.message);
-    });
-    
-    connection.on('end', () => {
-      console.log(`🔌 SMTP connection ended from ${remoteAddress}`);
-    });
-    
-    connection.on('close', () => {
-      console.log(`🔌 SMTP connection closed from ${remoteAddress}`);
-    });
-  });
-
   // Bind to 0.0.0.0 to accept connections from Docker containers and other hosts
   const listener = server.listen(port, '0.0.0.0', () => {
     console.log(`📬 SMTP server listening on 0.0.0.0:${port} (accepting connections from all interfaces)`);
@@ -215,8 +202,12 @@ export const createSmtpServer = (
     console.error('❌ SMTP listener error:', error.message);
     console.error('   Error code:', error.code);
     console.error('   Error syscall:', error.syscall);
-    console.error('   Error address:', error.address);
-    console.error('   Error port:', error.port);
+    if ('address' in error) {
+      console.error('   Error address:', error.address);
+    }
+    if ('port' in error) {
+      console.error('   Error port:', error.port);
+    }
   });
 
   // Handle connection errors at the socket level
@@ -241,11 +232,6 @@ export const createSmtpServer = (
     socket.on('timeout', () => {
       console.warn(`⏱️  Socket timeout from ${remoteAddress}:${remotePort}`);
     });
-  });
-
-  // Handle listen errors
-  server.on('listening', () => {
-    // Server successfully started
   });
 
   // SMTPServer extends EventEmitter and should have close method

@@ -8,7 +8,7 @@ const navigationItems = [
   { id: "settings", label: "Settings", icon: Settings, path: "/settings" },
 ];
 
-export const Sidebar = ({ currentView }: { currentView?: string }) => {
+export const Sidebar = ({ currentView: _currentView }: { currentView?: string }) => {
   const [theme, setTheme] = useState<"light" | "dark">("light");
   const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
