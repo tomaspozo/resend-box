@@ -96,6 +96,19 @@ Ports can be set via CLI flags or environment variables:
         1025
       );
 
+      // Add global error handlers FIRST to prevent crashes
+      process.on('uncaughtException', (error: Error) => {
+        console.error('❌ Uncaught Exception:', error.message);
+        console.error(error.stack);
+        // Log but don't exit - keep server running for sandbox
+      });
+
+      process.on('unhandledRejection', (reason: unknown, promise: Promise<unknown>) => {
+        console.error('❌ Unhandled Rejection at:', promise);
+        console.error('Reason:', reason);
+        // Log but don't exit - keep server running for sandbox
+      });
+
       // Create the email store
       const store = createStore();
 
@@ -159,14 +172,26 @@ Ports can be set via CLI flags or environment variables:
         console.log(`\n💡 Tip: Run 'resend-sandbox init' to configure your project\n`);
       });
 
-      // Handle server errors
+      // Handle HTTP server errors
       server.on('error', (error: NodeJS.ErrnoException) => {
         if (error.code === 'EADDRINUSE') {
           console.error(`❌ Port ${httpPort} is already in use. Try a different port with --http-port`);
         } else {
-          console.error('❌ Failed to start HTTP server:', error.message);
+          console.error('❌ HTTP server error:', error.message);
         }
-        process.exit(1);
+        // Only exit on critical errors like port already in use
+        if (error.code === 'EADDRINUSE') {
+          process.exit(1);
+        }
+      });
+
+      // Handle HTTP server client errors (don't crash on client errors)
+      server.on('clientError', (error: NodeJS.ErrnoException, socket) => {
+        console.error('❌ HTTP client error:', error.message);
+        // End the connection gracefully
+        if (socket.writable) {
+          socket.end('HTTP/1.1 400 Bad Request\r\n\r\n');
+        }
       });
 
       // Start SMTP server
