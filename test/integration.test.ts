@@ -1,5 +1,5 @@
 /**
- * Integration tests for Resend Sandbox
+ * Integration tests for Resend Box
  * Run with: npm test
  */
 
@@ -84,7 +84,7 @@ const sendSmtpEmail = async (port: number, email: {
   });
 };
 
-describe('Resend Sandbox Integration', () => {
+describe('Resend Box Integration', () => {
   let store: EmailStore;
   let httpServer: Server;
   let smtpServer: ReturnType<typeof createSmtpServer>;

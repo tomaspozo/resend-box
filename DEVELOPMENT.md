@@ -1,6 +1,6 @@
 # Development Guide
 
-This guide explains how to develop, test, and use Resend Sandbox locally without installing the published package.
+This guide explains how to develop, test, and use Resend Box locally without installing the published package.
 
 ## Prerequisites
 
@@ -154,10 +154,10 @@ From your project directory (not the sandbox directory):
 
 ```bash
 # If running from built version
-node /path/to/resend-sandbox/dist/cli.js init
+node /path/to/resend-box/dist/cli.js init
 
 # If using tsx
-tsx /path/to/resend-sandbox/src/cli.ts init
+tsx /path/to/resend-box/src/cli.ts init
 ```
 
 This will add `RESEND_BASE_URL=http://localhost:4657` to your `.env.local` or `.env` file.
@@ -179,7 +179,7 @@ RESEND_BASE_URL=http://localhost:3000
 ## Project Structure
 
 ```
-resend-sandbox/
+resend-box/
 ├── src/                 # Backend TypeScript source
 │   ├── cli.ts          # CLI entry point
 │   ├── resend-api.ts   # Resend API mock

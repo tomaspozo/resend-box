@@ -29,16 +29,16 @@ const parsePort = (value: string, envVar?: string, defaultPort: number = 4657): 
 const program = new Command();
 
 program
-  .name('resend-sandbox')
+  .name('resend-box')
   .description('Local Resend API mock and SMTP server with web UI for email testing')
   .version('0.1.0')
   .addHelpText('after', `
 Examples:
-  $ resend-sandbox                    Start the sandbox (default)
-  $ resend-sandbox start              Start the sandbox
-  $ resend-sandbox init               Configure RESEND_BASE_URL in your project
-  $ resend-sandbox --http-port 3000   Start with custom HTTP port
-  $ resend-sandbox --smtp-port 2525   Start with custom SMTP port
+  $ resend-box                    Start the sandbox (default)
+  $ resend-box start              Start the sandbox
+  $ resend-box init               Configure RESEND_BASE_URL in your project
+  $ resend-box --http-port 3000   Start with custom HTTP port
+  $ resend-box --smtp-port 2525   Start with custom SMTP port
 
 Environment Variables:
   RESEND_SANDBOX_HTTP_PORT  Override HTTP port (default: 4657)
@@ -56,8 +56,8 @@ This command will:
   • Allow your Resend SDK to automatically use the sandbox
 
 Example:
-  $ resend-sandbox init
-  $ resend-sandbox init --base-url http://localhost:3000
+  $ resend-box init
+  $ resend-box init --base-url http://localhost:3000
   `)
   .action(async (options) => {
     try {
@@ -144,9 +144,9 @@ Ports can be set via CLI flags or environment variables:
         app.get('/', (req, res) => {
           res.send(`
             <html>
-              <head><title>Resend Sandbox</title></head>
+              <head><title>Resend Box</title></head>
               <body style="font-family: sans-serif; padding: 2rem;">
-                <h1>Resend Sandbox</h1>
+                <h1>Resend Box</h1>
                 <p>The web UI is not built yet. Run <code>npm run build</code> to build it.</p>
                 <p>API endpoints are still available:</p>
                 <ul>
@@ -161,7 +161,7 @@ Ports can be set via CLI flags or environment variables:
 
       // Start HTTP server
       const server = app.listen(httpPort, () => {
-        console.log('\n🚀 Resend Sandbox is running!\n');
+        console.log('\n🚀 Resend Box is running!\n');
         console.log(`📧 Resend API: http://localhost:${httpPort}/emails`);
         if (uiExists) {
           console.log(`🌐 Web UI:     http://localhost:${httpPort}`);
@@ -169,7 +169,7 @@ Ports can be set via CLI flags or environment variables:
           console.log(`🌐 Web UI:     (not built - run 'npm run build' to build it)`);
         }
         console.log(`📬 SMTP:       localhost:${smtpPort}`);
-        console.log(`\n💡 Tip: Run 'resend-sandbox init' to configure your project\n`);
+        console.log(`\n💡 Tip: Run 'resend-box init' to configure your project\n`);
       });
 
       // Handle HTTP server errors
@@ -199,7 +199,7 @@ Ports can be set via CLI flags or environment variables:
       
       // Handle graceful shutdown
       const shutdown = () => {
-        console.log('\n\n👋 Shutting down Resend Sandbox...');
+        console.log('\n\n👋 Shutting down Resend Box...');
         server.close(() => {
           if (typeof smtpServer.close === 'function') {
             smtpServer.close(() => {
@@ -216,7 +216,7 @@ Ports can be set via CLI flags or environment variables:
       process.on('SIGINT', shutdown);
       process.on('SIGTERM', shutdown);
     } catch (error) {
-      console.error('❌ Failed to start Resend Sandbox:', error instanceof Error ? error.message : String(error));
+      console.error('❌ Failed to start Resend Box:', error instanceof Error ? error.message : String(error));
       process.exit(1);
     }
   });

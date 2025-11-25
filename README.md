@@ -1,4 +1,4 @@
-# Resend Sandbox
+# Resend Box
 
 A local email sandbox that acts as both a Resend API mock and an SMTP server, with a modern web UI for inspecting captured emails.
 
@@ -14,22 +14,22 @@ A local email sandbox that acts as both a Resend API mock and an SMTP server, wi
 ## Installation
 
 ```bash
-npm install -g resend-sandbox
+npm install -g resend-box
 # or
-npx resend-sandbox
+npx resend-box
 ```
 
 ## Quick Start
 
 1. **Initialize your project** (optional, but recommended):
    ```bash
-   npx resend-sandbox init
+   npx resend-box init
    ```
    This will configure `RESEND_BASE_URL` in your `.env.local` or `.env` file.
 
 2. **Start the sandbox**:
    ```bash
-   npx resend-sandbox
+   npx resend-box
    ```
 
 3. **View captured emails**:
@@ -72,31 +72,31 @@ You can override ports via CLI flags or environment variables:
 
 ```bash
 # Using CLI flags
-npx resend-sandbox --http-port 3000 --smtp-port 2525
+npx resend-box --http-port 3000 --smtp-port 2525
 
 # Using environment variables
-RESEND_SANDBOX_HTTP_PORT=3000 RESEND_SANDBOX_SMTP_PORT=2525 npx resend-sandbox
+RESEND_SANDBOX_HTTP_PORT=3000 RESEND_SANDBOX_SMTP_PORT=2525 npx resend-box
 ```
 
 ### CLI Commands
 
 ```bash
 # Start the sandbox (default command)
-npx resend-sandbox
+npx resend-box
 # or
-npx resend-sandbox start
+npx resend-box start
 
 # Initialize RESEND_BASE_URL in your project
-npx resend-sandbox init
-npx resend-sandbox init --base-url http://localhost:3000
+npx resend-box init
+npx resend-box init --base-url http://localhost:3000
 
 # Show help
-npx resend-sandbox --help
+npx resend-box --help
 ```
 
 ## Architecture
 
-Resend Sandbox consists of three main components:
+Resend Box consists of three main components:
 
 1. **Resend API Mock** (`/emails`): Accepts POST requests matching the Resend API format and stores emails in memory
 2. **SMTP Server** (port 1025): Accepts emails via SMTP protocol and normalizes them to the same format
@@ -179,7 +179,7 @@ import { Resend } from 'resend';
 
 const resend = new Resend('re_test_...');
 
-// After running 'resend-sandbox init', this will use the local sandbox
+// After running 'resend-box init', this will use the local sandbox
 const { data } = await resend.emails.send({
   from: 'you@example.com',
   to: 'user@gmail.com',

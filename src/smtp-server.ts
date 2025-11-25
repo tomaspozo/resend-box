@@ -91,7 +91,7 @@ export const createSmtpServer = (
   port: number = 1025,
 ): SMTPServer => {
   const options: SMTPServerOptions = {
-    name: 'resend-sandbox',
+    name: 'resend-box',
     authOptional: true,
     disabledCommands: ['AUTH', 'STARTTLS'],
     secure: false,

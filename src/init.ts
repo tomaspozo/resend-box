@@ -36,6 +36,6 @@ export const initCommand = async (baseUrl: string = 'http://localhost:4657'): Pr
 
   console.log(`\n📝 RESEND_BASE_URL=${baseUrl}`);
   console.log('\n💡 Your Resend SDK will now use the local sandbox!');
-  console.log('   Start the sandbox with: npx resend-sandbox start\n');
+  console.log('   Start the sandbox with: npx resend-box start\n');
 };
 

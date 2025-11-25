@@ -43,7 +43,7 @@ export const Sidebar = ({ currentView }: { currentView?: string }) => {
         >
           {!collapsed && (
             <span className="font-semibold text-sidebar-foreground">
-              Resend Sandbox
+              Resend Box
             </span>
           )}
         </div>
