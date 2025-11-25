@@ -24,7 +24,7 @@ const sendSmtpEmail = async (port: number, email: {
   html?: string;
 }): Promise<void> => {
   return new Promise((resolve, reject) => {
-    const client = createConnection({ port, host: 'localhost' });
+    const client = createConnection({ port, host: '127.0.0.1' });
     let data = '';
 
     client.on('data', (chunk) => {
@@ -35,7 +35,7 @@ const sendSmtpEmail = async (port: number, email: {
       const lastLine = lines[lines.length - 1];
       if (lastLine?.startsWith('220')) {
         // Server greeting
-        client.write('EHLO localhost\r\n');
+        client.write('EHLO 127.0.0.1\r\n');
       } else if (lastLine?.startsWith('250')) {
         if (lastLine.includes('EHLO')) {
           client.write(`MAIL FROM:<${email.from}>\r\n`);
@@ -94,7 +94,7 @@ describe('Resend Box Integration', () => {
   beforeAll(() => {
     store = createStore();
     const resendApi = createResendApiServer(store, httpPort);
-    const webApi = createWebApiServer(store);
+    const webApi = createWebApiServer(store, httpPort, smtpPort);
     const app = express();
     app.use(resendApi);
     app.use(webApi);
@@ -115,7 +115,7 @@ describe('Resend Box Integration', () => {
   });
 
   it('should accept Resend API emails', async () => {
-    const response = await fetch(`http://localhost:${httpPort}/emails`, {
+    const response = await fetch(`http://127.0.0.1:${httpPort}/emails`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -134,7 +134,7 @@ describe('Resend Box Integration', () => {
   });
 
   it('should validate required fields', async () => {
-    const response = await fetch(`http://localhost:${httpPort}/emails`, {
+    const response = await fetch(`http://127.0.0.1:${httpPort}/emails`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -147,7 +147,7 @@ describe('Resend Box Integration', () => {
   });
 
   it('should handle HTML emails', async () => {
-    const response = await fetch(`http://localhost:${httpPort}/emails`, {
+    const response = await fetch(`http://127.0.0.1:${httpPort}/emails`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -164,7 +164,7 @@ describe('Resend Box Integration', () => {
   });
 
   it('should handle multiple recipients', async () => {
-    const response = await fetch(`http://localhost:${httpPort}/emails`, {
+    const response = await fetch(`http://127.0.0.1:${httpPort}/emails`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -183,7 +183,7 @@ describe('Resend Box Integration', () => {
   });
 
   it('should handle CC and BCC fields', async () => {
-    const response = await fetch(`http://localhost:${httpPort}/emails`, {
+    const response = await fetch(`http://127.0.0.1:${httpPort}/emails`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -257,7 +257,7 @@ describe('Resend Box Integration', () => {
   describe('Web API Integration', () => {
     beforeEach(async () => {
       // Add some test emails
-      await fetch(`http://localhost:${httpPort}/emails`, {
+      await fetch(`http://127.0.0.1:${httpPort}/emails`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -267,7 +267,7 @@ describe('Resend Box Integration', () => {
           text: 'First email',
         }),
       });
-      await fetch(`http://localhost:${httpPort}/emails`, {
+      await fetch(`http://127.0.0.1:${httpPort}/emails`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -280,7 +280,7 @@ describe('Resend Box Integration', () => {
     });
 
     it('should list all emails via GET /sandbox/emails', async () => {
-      const response = await fetch(`http://localhost:${httpPort}/sandbox/emails`);
+      const response = await fetch(`http://127.0.0.1:${httpPort}/sandbox/emails`);
       expect(response.ok).toBe(true);
       const data = await response.json();
       expect(data.emails).toBeDefined();
@@ -291,7 +291,7 @@ describe('Resend Box Integration', () => {
     });
 
     it('should return emails in reverse chronological order', async () => {
-      const response = await fetch(`http://localhost:${httpPort}/sandbox/emails`);
+      const response = await fetch(`http://127.0.0.1:${httpPort}/sandbox/emails`);
       const data = await response.json();
       const emails = data.emails;
       for (let i = 0; i < emails.length - 1; i++) {
@@ -300,11 +300,11 @@ describe('Resend Box Integration', () => {
     });
 
     it('should get a specific email via GET /sandbox/emails/:id', async () => {
-      const listResponse = await fetch(`http://localhost:${httpPort}/sandbox/emails`);
+      const listResponse = await fetch(`http://127.0.0.1:${httpPort}/sandbox/emails`);
       const listData = await listResponse.json();
       const emailId = listData.emails[0].id;
 
-      const response = await fetch(`http://localhost:${httpPort}/sandbox/emails/${emailId}`);
+      const response = await fetch(`http://127.0.0.1:${httpPort}/sandbox/emails/${emailId}`);
       expect(response.ok).toBe(true);
       const data = await response.json();
       expect(data.email).toBeDefined();
@@ -313,51 +313,51 @@ describe('Resend Box Integration', () => {
     });
 
     it('should return 404 for non-existent email', async () => {
-      const response = await fetch(`http://localhost:${httpPort}/sandbox/emails/nonexistent-id`);
+      const response = await fetch(`http://127.0.0.1:${httpPort}/sandbox/emails/nonexistent-id`);
       expect(response.status).toBe(404);
       const data = await response.json();
       expect(data.error).toBe('Email not found');
     });
 
     it('should delete a specific email via DELETE /sandbox/emails/:id', async () => {
-      const listResponse = await fetch(`http://localhost:${httpPort}/sandbox/emails`);
+      const listResponse = await fetch(`http://127.0.0.1:${httpPort}/sandbox/emails`);
       const listData = await listResponse.json();
       const emailId = listData.emails[0].id;
 
-      const deleteResponse = await fetch(`http://localhost:${httpPort}/sandbox/emails/${emailId}`, {
+      const deleteResponse = await fetch(`http://127.0.0.1:${httpPort}/sandbox/emails/${emailId}`, {
         method: 'DELETE',
       });
       expect(deleteResponse.ok).toBe(true);
 
-      const getResponse = await fetch(`http://localhost:${httpPort}/sandbox/emails/${emailId}`);
+      const getResponse = await fetch(`http://127.0.0.1:${httpPort}/sandbox/emails/${emailId}`);
       expect(getResponse.status).toBe(404);
     });
 
     it('should return 404 when deleting non-existent email', async () => {
-      const response = await fetch(`http://localhost:${httpPort}/sandbox/emails/nonexistent-id`, {
+      const response = await fetch(`http://127.0.0.1:${httpPort}/sandbox/emails/nonexistent-id`, {
         method: 'DELETE',
       });
       expect(response.status).toBe(404);
     });
 
     it('should clear all emails via DELETE /sandbox/emails', async () => {
-      const deleteResponse = await fetch(`http://localhost:${httpPort}/sandbox/emails`, {
+      const deleteResponse = await fetch(`http://127.0.0.1:${httpPort}/sandbox/emails`, {
         method: 'DELETE',
       });
       expect(deleteResponse.ok).toBe(true);
 
-      const listResponse = await fetch(`http://localhost:${httpPort}/sandbox/emails`);
+      const listResponse = await fetch(`http://127.0.0.1:${httpPort}/sandbox/emails`);
       const listData = await listResponse.json();
       expect(listData.emails.length).toBe(0);
     });
 
     it('should handle empty email list', async () => {
       // Clear emails first
-      await fetch(`http://localhost:${httpPort}/sandbox/emails`, {
+      await fetch(`http://127.0.0.1:${httpPort}/sandbox/emails`, {
         method: 'DELETE',
       });
 
-      const response = await fetch(`http://localhost:${httpPort}/sandbox/emails`);
+      const response = await fetch(`http://127.0.0.1:${httpPort}/sandbox/emails`);
       expect(response.ok).toBe(true);
       const data = await response.json();
       expect(data.emails).toEqual([]);
@@ -367,7 +367,7 @@ describe('Resend Box Integration', () => {
   describe('Edge Cases', () => {
     it('should handle large email payloads', async () => {
       const largeText = 'x'.repeat(100000); // 100KB of text
-      const response = await fetch(`http://localhost:${httpPort}/emails`, {
+      const response = await fetch(`http://127.0.0.1:${httpPort}/emails`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -384,7 +384,7 @@ describe('Resend Box Integration', () => {
     });
 
     it('should handle emails with special characters in subject', async () => {
-      const response = await fetch(`http://localhost:${httpPort}/emails`, {
+      const response = await fetch(`http://127.0.0.1:${httpPort}/emails`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -401,7 +401,7 @@ describe('Resend Box Integration', () => {
     });
 
     it('should handle missing optional fields gracefully', async () => {
-      const response = await fetch(`http://localhost:${httpPort}/emails`, {
+      const response = await fetch(`http://127.0.0.1:${httpPort}/emails`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

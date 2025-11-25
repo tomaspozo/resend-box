@@ -1,4 +1,5 @@
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Table,
   TableBody,
@@ -7,6 +8,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Inbox, Settings } from "lucide-react";
+import { Link } from "react-router-dom";
 
 import { API_BADGE_CLASSES, SMTP_BADGE_CLASSES } from "@/lib/constants";
 
@@ -52,8 +55,21 @@ export const EmailList = ({
             Loading...
           </div>
         ) : emails.length === 0 ? (
-          <div className="flex items-center justify-center h-full text-muted-foreground">
-            No emails yet
+          <div className="flex flex-col -mt-10 items-center justify-center h-full text-center px-6">
+            <div className="mb-6">
+              <Inbox className="h-16 w-16 text-muted-foreground/40 mx-auto" />
+            </div>
+            <h2 className="text-2xl font-semibold mb-2">No emails yet</h2>
+            <p className="text-muted-foreground mb-6 max-w-md">
+              Send your first email to your SMTP server or by using the Resend
+              SDK. Check the Settings page for configuration details.
+            </p>
+            <Link to="/settings">
+              <Button variant="default" className="gap-2">
+                <Settings className="h-4 w-4" />
+                Go to Settings
+              </Button>
+            </Link>
           </div>
         ) : (
           <Table>

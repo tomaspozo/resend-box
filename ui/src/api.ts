@@ -38,3 +38,17 @@ export const clearAllEmails = async (): Promise<void> => {
   }
 };
 
+export type ServerConfig = {
+  httpPort: number;
+  smtpPort: number;
+};
+
+export const fetchConfig = async (): Promise<ServerConfig> => {
+  const response = await fetch(`${API_BASE}/config`);
+  if (!response.ok) {
+    throw new Error('Failed to fetch config');
+  }
+  const data = await response.json();
+  return data;
+};
+

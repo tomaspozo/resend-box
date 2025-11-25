@@ -30,8 +30,8 @@ export const DashboardLayout = () => {
         </header>
 
         {/* Content Area */}
-        <main className="flex-1 h-content overflow-y-auto flex justify-center w-full">
-          <div className="w-full max-w-5xl pt-6">
+        <main className="flex-1 overflow-y-auto flex justify-center w-full px-4 py-6">
+          <div className="w-full max-w-5xl">
             <Outlet />
           </div>
         </main>

@@ -1,5 +1,22 @@
 #!/usr/bin/env node
 
+// Load environment variables from .env.local and .env files
+import { config } from 'dotenv';
+import { existsSync } from 'fs';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
+
+// Load .env.local first (higher priority), then .env
+const cwd = process.cwd();
+const envLocalPath = join(cwd, '.env.local');
+const envPath = join(cwd, '.env');
+
+if (existsSync(envLocalPath)) {
+  config({ path: envLocalPath });
+} else if (existsSync(envPath)) {
+  config({ path: envPath });
+}
+
 import { Command } from 'commander';
 import { createStore } from './store.js';
 import { createResendApiServer } from './resend-api.js';
@@ -8,9 +25,6 @@ import { createWebApiServer } from './web-api.js';
 import { initCommand } from './init.js';
 import express from 'express';
 import path from 'path';
-import { fileURLToPath } from 'url';
-import { dirname } from 'path';
-import { existsSync } from 'fs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -48,7 +62,7 @@ Environment Variables:
 program
   .command('init')
   .description('Initialize RESEND_BASE_URL in your .env.local or .env file')
-  .option('--base-url <url>', 'Custom base URL for Resend API', 'http://localhost:4657')
+  .option('--base-url <url>', 'Custom base URL for Resend API', 'http://127.0.0.1:4657')
   .addHelpText('after', `
 This command will:
   • Check for .env.local or .env in the current directory
@@ -57,7 +71,7 @@ This command will:
 
 Example:
   $ resend-box init
-  $ resend-box init --base-url http://localhost:3000
+  $ resend-box init --base-url http://127.0.0.1:3000
   `)
   .action(async (options) => {
     try {
@@ -75,9 +89,9 @@ program
   .option('--smtp-port <port>', 'SMTP port', process.env.RESEND_SANDBOX_SMTP_PORT || '1025')
   .addHelpText('after', `
 The sandbox provides:
-  • Resend API mock at http://localhost:<http-port>/emails
-  • Web UI at http://localhost:<http-port>
-  • SMTP server at localhost:<smtp-port>
+  • Resend API mock at http://127.0.0.1:<http-port>/emails
+  • Web UI at http://127.0.0.1:<http-port>
+  • SMTP server at 127.0.0.1:<smtp-port>
 
 Ports can be set via CLI flags or environment variables:
   RESEND_SANDBOX_HTTP_PORT  (default: 4657)
@@ -116,7 +130,7 @@ Ports can be set via CLI flags or environment variables:
       const resendApi = createResendApiServer(store, httpPort);
 
       // Create and mount the Web API server
-      const webApi = createWebApiServer(store);
+      const webApi = createWebApiServer(store, httpPort, smtpPort);
 
       // Combine both APIs into one Express app
       const app = express();
@@ -162,13 +176,13 @@ Ports can be set via CLI flags or environment variables:
       // Start HTTP server
       const server = app.listen(httpPort, () => {
         console.log('\n🚀 Resend Box is running!\n');
-        console.log(`📧 Resend API: http://localhost:${httpPort}/emails`);
+        console.log(`📧 Resend API: http://127.0.0.1:${httpPort}/emails`);
         if (uiExists) {
-          console.log(`🌐 Web UI:     http://localhost:${httpPort}`);
+          console.log(`🌐 Web UI:     http://127.0.0.1:${httpPort}`);
         } else {
           console.log(`🌐 Web UI:     (not built - run 'npm run build' to build it)`);
         }
-        console.log(`📬 SMTP:       localhost:${smtpPort}`);
+        console.log(`📬 SMTP:       127.0.0.1:${smtpPort}`);
         console.log(`\n💡 Tip: Run 'resend-box init' to configure your project\n`);
       });
 

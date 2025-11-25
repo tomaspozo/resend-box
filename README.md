@@ -33,7 +33,7 @@ npx resend-box
    ```
 
 3. **View captured emails**:
-   Open http://localhost:4657 in your browser.
+   Open http://127.0.0.1:4657 in your browser.
 
 ## Usage
 
@@ -56,7 +56,7 @@ const { data } = await resend.emails.send({
 
 ### SMTP
 
-Configure your application to send emails via SMTP to `localhost:1025` (default port).
+Configure your application to send emails via SMTP to `127.0.0.1:1025` (default port).
 
 ## Configuration
 
@@ -88,7 +88,7 @@ npx resend-box start
 
 # Initialize RESEND_BASE_URL in your project
 npx resend-box init
-npx resend-box init --base-url http://localhost:3000
+npx resend-box init --base-url http://127.0.0.1:3000
 
 # Show help
 npx resend-box --help
@@ -196,7 +196,7 @@ console.log('Email ID:', data.id);
 import nodemailer from 'nodemailer';
 
 const transporter = nodemailer.createTransport({
-  host: 'localhost',
+  host: '127.0.0.1',
   port: 1025,
   secure: false,
 });
@@ -221,7 +221,7 @@ msg['Subject'] = 'Test Email'
 msg['From'] = 'sender@example.com'
 msg['To'] = 'recipient@example.com'
 
-server = smtplib.SMTP('localhost', 1025)
+server = smtplib.SMTP('127.0.0.1', 1025)
 server.send_message(msg)
 server.quit()
 ```
@@ -230,7 +230,7 @@ server.quit()
 
 ```bash
 # Send email via Resend API mock
-curl -X POST http://localhost:4657/emails \
+curl -X POST http://127.0.0.1:4657/emails \
   -H "Content-Type: application/json" \
   -d '{
     "from": "test@example.com",
@@ -240,10 +240,10 @@ curl -X POST http://localhost:4657/emails \
   }'
 
 # List all emails
-curl http://localhost:4657/sandbox/emails
+curl http://127.0.0.1:4657/sandbox/emails
 
 # Get specific email
-curl http://localhost:4657/sandbox/emails/{email-id}
+curl http://127.0.0.1:4657/sandbox/emails/{email-id}
 ```
 
 ## Development

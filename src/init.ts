@@ -4,7 +4,7 @@ import { join } from 'path';
 /**
  * Initializes RESEND_BASE_URL in .env.local or .env file
  */
-export const initCommand = async (baseUrl: string = 'http://localhost:4657'): Promise<void> => {
+export const initCommand = async (baseUrl: string = 'http://127.0.0.1:4657'): Promise<void> => {
   const cwd = process.cwd();
   const envLocalPath = join(cwd, '.env.local');
   const envPath = join(cwd, '.env');

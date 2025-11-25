@@ -76,3 +76,8 @@ export type WebApiMessageResponse = {
   message: string;
 };
 
+export type WebApiConfigResponse = {
+  httpPort: number;
+  smtpPort: number;
+};
+

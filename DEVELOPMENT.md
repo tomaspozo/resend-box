@@ -36,9 +36,9 @@ npm run dev
 ```
 
 This starts:
-- Resend API mock at `http://localhost:4657/emails`
-- SMTP server at `localhost:1025`
-- Web API at `http://localhost:4657/sandbox/*`
+- Resend API mock at `http://127.0.0.1:4657/emails`
+- SMTP server at `127.0.0.1:1025`
+- Web API at `http://127.0.0.1:4657/sandbox/*`
 
 **Note:** The UI won't be available in this mode unless you've built it first (see below).
 
@@ -57,8 +57,8 @@ npm run dev:ui
 ```
 
 This starts:
-- Backend at `http://localhost:4657`
-- UI dev server at `http://localhost:5173` (or another port if 5173 is taken)
+- Backend at `http://127.0.0.1:4657`
+- UI dev server at `http://127.0.0.1:5173` (or another port if 5173 is taken)
 
 The UI dev server will proxy API requests to the backend automatically.
 
@@ -160,20 +160,20 @@ node /path/to/resend-box/dist/cli.js init
 tsx /path/to/resend-box/src/cli.ts init
 ```
 
-This will add `RESEND_BASE_URL=http://localhost:4657` to your `.env.local` or `.env` file.
+This will add `RESEND_BASE_URL=http://127.0.0.1:4657` to your `.env.local` or `.env` file.
 
 ### Option 2: Manual Configuration
 
 Add to your project's `.env.local` or `.env`:
 
 ```env
-RESEND_BASE_URL=http://localhost:4657
+RESEND_BASE_URL=http://127.0.0.1:4657
 ```
 
 If you're using custom ports:
 
 ```env
-RESEND_BASE_URL=http://localhost:3000
+RESEND_BASE_URL=http://127.0.0.1:3000
 ```
 
 ## Project Structure
@@ -208,16 +208,16 @@ resend-box/
 
 1. **Backend debugging:** Use Node.js debugger or add `console.log` statements
 2. **UI debugging:** Use browser DevTools (React DevTools recommended)
-3. **SMTP testing:** Use tools like `telnet localhost 1025` or email clients
+3. **SMTP testing:** Use tools like `telnet 127.0.0.1 1025` or email clients
 
 ### Testing SMTP Locally
 
 ```bash
 # Using telnet (if available)
-telnet localhost 1025
+telnet 127.0.0.1 1025
 
 # Then send SMTP commands manually:
-EHLO localhost
+EHLO 127.0.0.1
 MAIL FROM:<test@example.com>
 RCPT TO:<user@example.com>
 DATA

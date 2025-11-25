@@ -5,13 +5,14 @@ import type {
   WebApiEmailResponse,
   WebApiErrorResponse,
   WebApiMessageResponse,
+  WebApiConfigResponse,
 } from './types.js';
 import { listEmails, findEmailById, clearEmails, removeEmail } from './store.js';
 
 /**
  * Creates the Web API server for the UI
  */
-export const createWebApiServer = (store: EmailStore): Express => {
+export const createWebApiServer = (store: EmailStore, httpPort: number, smtpPort: number): Express => {
   const app = express();
 
   app.use(express.json());
@@ -100,6 +101,22 @@ export const createWebApiServer = (store: EmailStore): Express => {
       return res.json(response);
     } catch (error) {
       console.error('Error deleting email:', error);
+      const errorResponse: WebApiErrorResponse = { error: 'Internal server error' };
+      return res.status(500).json(errorResponse);
+    }
+  });
+
+  /**
+   * GET /sandbox/config
+   * Returns the server configuration (ports)
+   * Response: { httpPort: number, smtpPort: number }
+   */
+  app.get('/sandbox/config', (req: Request, res: Response<WebApiConfigResponse | WebApiErrorResponse>) => {
+    try {
+      const response: WebApiConfigResponse = { httpPort, smtpPort };
+      return res.json(response);
+    } catch (error) {
+      console.error('Error fetching config:', error);
       const errorResponse: WebApiErrorResponse = { error: 'Internal server error' };
       return res.status(500).json(errorResponse);
     }
