@@ -84,8 +84,53 @@ export const createSmtpServer = (
         });
     },
     onConnect(session, callback) {
-      // Accept all connections (sandbox mode)
+      // Log connection attempts
+      const remoteAddress = session.remoteAddress || 'unknown';
+      const remotePort = session.remotePort || 'unknown';
+      const hostname = session.hostname || session.remoteAddress || 'unknown';
+      console.log(`🔌 SMTP connection attempt from ${remoteAddress}:${remotePort} (${hostname})`);
+      
+      // Log session details for debugging
+      console.log(`   Session details:`, {
+        id: session.id,
+        remoteAddress: session.remoteAddress,
+        remotePort: session.remotePort,
+        hostname: session.hostname,
+        clientHostname: session.clientHostname,
+      });
+      
+      try {
+        // Accept all connections (sandbox mode)
+        callback();
+        console.log(`✅ SMTP connection accepted from ${remoteAddress}:${remotePort}`);
+      } catch (error) {
+        const err = error instanceof Error ? error : new Error(String(error));
+        console.error(`❌ Error accepting connection from ${remoteAddress}:${remotePort}:`, err.message);
+        console.error(`   Error stack:`, err.stack);
+        // Reject the connection with the error
+        callback(err);
+      }
+    },
+    onMailFrom(address, session, callback) {
+      const remoteAddress = session.remoteAddress || 'unknown';
+      // address is an AddressObject, extract the email
+      const email = address.address || String(address);
+      console.log(`📨 MAIL FROM: ${email} (from ${remoteAddress})`);
+      // Accept all senders in sandbox mode
       callback();
+    },
+    onRcptTo(address, session, callback) {
+      const remoteAddress = session.remoteAddress || 'unknown';
+      // address is an AddressObject, extract the email
+      const email = address.address || String(address);
+      console.log(`📨 RCPT TO: ${email} (from ${remoteAddress})`);
+      // Accept all recipients in sandbox mode
+      callback();
+    },
+    onAuth(auth, session, callback) {
+      const remoteAddress = session.remoteAddress || 'unknown';
+      console.log(`🔐 AUTH attempt from ${remoteAddress} (but disabled)`);
+      callback(new Error('AUTH not supported'));
     },
   };
 
@@ -94,6 +139,9 @@ export const createSmtpServer = (
   // Handle SMTP server errors - don't crash the entire application
   server.on('error', (error: Error) => {
     console.error('❌ SMTP server error:', error.message);
+    console.error('   Error name:', error.name);
+    console.error('   Error code:', (error as any).code);
+    console.error('   Error stack:', error.stack);
     // Don't exit - keep the server running for other connections
   });
 
@@ -101,8 +149,61 @@ export const createSmtpServer = (
     console.log('📬 SMTP server closed');
   });
 
-  server.listen(port, () => {
-    console.log(`📬 SMTP server listening on port ${port}`);
+  // Log connection events - these might not fire if using onConnect callback
+  // But we'll keep them for additional error tracking
+  server.on('connection', (connection) => {
+    const remoteAddress = connection.remoteAddress || 'unknown';
+    console.log(`✅ SMTP connection event fired from ${remoteAddress}`);
+    
+    connection.on('error', (error: Error) => {
+      console.error(`❌ SMTP connection error from ${remoteAddress}:`, error.message);
+    });
+    
+    connection.on('end', () => {
+      console.log(`🔌 SMTP connection ended from ${remoteAddress}`);
+    });
+    
+    connection.on('close', () => {
+      console.log(`🔌 SMTP connection closed from ${remoteAddress}`);
+    });
+  });
+
+  // Bind to 0.0.0.0 to accept connections from Docker containers and other hosts
+  const listener = server.listen(port, '0.0.0.0', () => {
+    console.log(`📬 SMTP server listening on 0.0.0.0:${port} (accepting connections from all interfaces)`);
+  });
+
+  // Handle socket-level errors (before onConnect is called)
+  listener.on('error', (error: NodeJS.ErrnoException) => {
+    console.error('❌ SMTP listener error:', error.message);
+    console.error('   Error code:', error.code);
+    console.error('   Error syscall:', error.syscall);
+    console.error('   Error address:', error.address);
+    console.error('   Error port:', error.port);
+  });
+
+  // Handle connection errors at the socket level
+  listener.on('connection', (socket) => {
+    const remoteAddress = socket.remoteAddress || 'unknown';
+    const remotePort = socket.remotePort || 'unknown';
+    console.log(`🔌 Socket connection from ${remoteAddress}:${remotePort}`);
+    
+    socket.on('error', (error: Error) => {
+      console.error(`❌ Socket error from ${remoteAddress}:${remotePort}:`, error.message);
+      console.error('   Error code:', (error as any).code);
+    });
+    
+    socket.on('close', (hadError: boolean) => {
+      if (hadError) {
+        console.error(`❌ Socket closed with error from ${remoteAddress}:${remotePort}`);
+      } else {
+        console.log(`🔌 Socket closed normally from ${remoteAddress}:${remotePort}`);
+      }
+    });
+    
+    socket.on('timeout', () => {
+      console.warn(`⏱️  Socket timeout from ${remoteAddress}:${remotePort}`);
+    });
   });
 
   // Handle listen errors
