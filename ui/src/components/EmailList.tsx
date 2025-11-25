@@ -64,7 +64,7 @@ export const EmailList = ({
               Send your first email to your SMTP server or by using the Resend
               SDK. Check the Settings page for configuration details.
             </p>
-            <Link to="/settings">
+            <Link to="/ui/settings">
               <Button variant="default" className="gap-2">
                 <Settings className="h-4 w-4" />
                 Go to Settings

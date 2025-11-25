@@ -33,7 +33,7 @@ export const EmailsListPage = () => {
   }, []);
 
   const handleEmailClick = (email: Email) => {
-    navigate(`/emails/${email.id}`);
+    navigate(`/ui/emails/${email.id}`);
   };
 
   return (

@@ -63,7 +63,7 @@ sender_name = "env(SMTP_SENDER_NAME)"`;
                 start sending emails.
               </p>
               {config && (
-                <div className="mt-3 pt-3 border-t border-green-200 dark:border-green-800">
+                <div className="mt-2 pt-3">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
                     <div>
                       <span className="text-green-800 dark:text-green-200 font-medium">
@@ -152,6 +152,19 @@ sender_name = "env(SMTP_SENDER_NAME)"`;
             code={supabaseConfigCode}
             language="toml"
             title="config.toml"
+          />
+          <p className="text-sm text-muted-foreground mt-6 mb-4">
+            Make sure to restart your Supabase local dev server after updating
+            the{" "}
+            <code className="text-xs bg-muted px-1.5 py-0.5 rounded">
+              config.toml
+            </code>{" "}
+            file.
+          </p>
+          <CodeBlock
+            code="npx supabase stop && npx supabase start"
+            language="bash"
+            title="Restart Supabase"
           />
         </CardContent>
       </Card>

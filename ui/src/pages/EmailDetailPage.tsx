@@ -14,7 +14,7 @@ export const EmailDetailPage = () => {
 
   useEffect(() => {
     if (!id) {
-      navigate("/emails");
+      navigate("/ui/emails");
       return;
     }
 
@@ -38,7 +38,7 @@ export const EmailDetailPage = () => {
   }, [id, navigate]);
 
   const handleBack = () => {
-    navigate("/emails");
+    navigate("/ui/emails");
   };
 
   if (loading) {

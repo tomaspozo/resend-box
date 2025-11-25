@@ -4,8 +4,8 @@ import { Link, useLocation } from "react-router-dom";
 import { cn } from "../lib/utils";
 
 const navigationItems = [
-  { id: "emails", label: "Emails", icon: Mail, path: "/emails" },
-  { id: "settings", label: "Settings", icon: Settings, path: "/settings" },
+  { id: "emails", label: "Emails", icon: Mail, path: "/ui/emails" },
+  { id: "settings", label: "Settings", icon: Settings, path: "/ui/settings" },
 ];
 
 export const Sidebar = ({

@@ -5,7 +5,7 @@ import { Outlet, useLocation } from "react-router-dom";
 
 export const DashboardLayout = () => {
   const location = useLocation();
-  const currentView = location.pathname.startsWith("/emails")
+  const currentView = location.pathname.startsWith("/ui/emails")
     ? "emails"
     : "settings";
 

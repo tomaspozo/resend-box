@@ -61,17 +61,21 @@ Environment Variables:
 
 program
   .command('init')
-  .description('Initialize RESEND_BASE_URL in your .env.local or .env file')
-  .option('--base-url <url>', 'Custom base URL for Resend API', 'http://127.0.0.1:4657')
+  .description('Initialize Resend Box configuration in your project')
+  .option('--base-url <url>', 'Custom base URL for Resend API (uses RESEND_SANDBOX_HTTP_PORT if not provided)', undefined)
   .addHelpText('after', `
 This command will:
   • Check for .env.local or .env in the current directory
-  • Add or update RESEND_BASE_URL to point to the local sandbox
-  • Allow your Resend SDK to automatically use the sandbox
+  • Add or update RESEND_BASE_URL and SMTP environment variables
+  • Update config.toml with SMTP settings (if Supabase project detected)
+  • Use ports from RESEND_SANDBOX_HTTP_PORT and RESEND_SANDBOX_SMTP_PORT env vars
+  • Detect SMTP host context (host.docker.internal for Supabase/Docker, 127.0.0.1 for local)
+  • Show interactive confirmation before applying changes
 
 Example:
   $ resend-box init
   $ resend-box init --base-url http://127.0.0.1:3000
+  $ RESEND_SANDBOX_HTTP_PORT=3000 RESEND_SANDBOX_SMTP_PORT=2525 resend-box init
   `)
   .action(async (options) => {
     try {
@@ -147,6 +151,7 @@ Ports can be set via CLI flags or environment variables:
         // Fallback to index.html for client-side routing
         app.get('*', (req, res) => {
           // Only serve index.html for non-API routes
+          // Allow /ui/* paths for React Router, exclude API routes
           if (!req.path.startsWith('/sandbox') && !req.path.startsWith('/emails')) {
             res.sendFile(path.join(uiPath, 'index.html'));
           } else {
