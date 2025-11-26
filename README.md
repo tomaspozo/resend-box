@@ -109,6 +109,8 @@ The `init` command automatically:
   - `127.0.0.1` for local development
 - Shows a summary and asks for confirmation before making changes
 
+> Don't forget to restart your supabase project after updating your config.toml
+
 ## Architecture
 
 Resend Box consists of three main components:

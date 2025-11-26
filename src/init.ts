@@ -39,25 +39,11 @@ const askConfirmation = (question: string): Promise<boolean> => {
 }
 
 /**
- * Detects SMTP_HOST context based on project structure
+ * Detects if this is a Supabase project by checking for supabase folder
  */
-const detectSmtpHost = (cwd: string): string => {
+const detectSupabaseProject = (cwd: string): boolean => {
   const supabaseDir = join(cwd, 'supabase')
-  const dockerfilePath = join(cwd, 'Dockerfile')
-  const dockerComposePath = join(cwd, 'docker-compose.yml')
-
-  // Check for Supabase directory
-  if (existsSync(supabaseDir) && statSync(supabaseDir).isDirectory()) {
-    return 'host.docker.internal'
-  }
-
-  // Check for Docker-related files
-  if (existsSync(dockerfilePath) || existsSync(dockerComposePath)) {
-    return 'host.docker.internal'
-  }
-
-  // Default to localhost for local development
-  return '127.0.0.1'
+  return existsSync(supabaseDir) && statSync(supabaseDir).isDirectory()
 }
 
 /**
@@ -182,9 +168,70 @@ sender_name = "env(SMTP_SENDER_NAME)"`
 
   // Check if section exists
   if (smtpSectionRegex.test(content)) {
-    // Update existing section
+    // Update existing section - preserve comments and other content after the section
     return {
-      content: content.replace(smtpSectionRegex, smtpSection + '\n'),
+      content: content.replace(smtpSectionRegex, (match, offset, fullContent) => {
+        // Extract any content after the section properties (comments, etc.)
+        // The match includes the header and properties, find what comes after our known properties
+        const lines = match.split(/\r?\n/)
+        const knownProperties = [
+          'enabled',
+          'host',
+          'port',
+          'user',
+          'pass',
+          'admin_email',
+          'sender_name',
+        ]
+
+        // Find the last line that contains a known property
+        let lastPropertyIndex = 0 // Header is at index 0
+        for (let i = 1; i < lines.length; i++) {
+          const line = lines[i].trim()
+          // Check if this line is a known property
+          const isKnownProperty = knownProperties.some(
+            (prop) =>
+              line.startsWith(prop + ' =') || line.startsWith(prop + '=')
+          )
+          if (isKnownProperty) {
+            lastPropertyIndex = i
+          } else if (line.startsWith('[')) {
+            // Next section starts, stop here (shouldn't happen in match, but safety check)
+            break
+          }
+        }
+
+        // Get any content after the last property (comments, blank lines, etc.)
+        // Preserve the exact content including newlines
+        const preservedContent = lines.slice(lastPropertyIndex + 1).join('\n')
+
+        // Check what comes after the match in the original content
+        const afterMatch = fullContent.slice(offset + match.length)
+        const trimmedAfter = afterMatch.trimStart()
+        const hasNextSection = trimmedAfter.startsWith('[')
+        
+        // Build replacement: blank line before, new section, blank line after last property, then preserved content
+        if (preservedContent.trim()) {
+          // Blank line right after sender_name, then preserved content (comments)
+          // If there's a next section, ensure we preserve the newline(s) before it
+          if (hasNextSection) {
+            // Count how many newlines were before the next section
+            const newlinesBeforeNext = afterMatch.length - trimmedAfter.length
+            // Ensure at least one newline before next section (preserve original spacing)
+            const spacingBeforeNext = newlinesBeforeNext > 0 ? '\n'.repeat(newlinesBeforeNext) : '\n'
+            return '\n' + smtpSection + '\n\n' + preservedContent + spacingBeforeNext
+          }
+          return '\n' + smtpSection + '\n\n' + preservedContent
+        } else {
+          // No preserved content, but check if there's a next section
+          if (hasNextSection) {
+            const newlinesBeforeNext = afterMatch.length - trimmedAfter.length
+            const spacingBeforeNext = newlinesBeforeNext > 0 ? '\n'.repeat(newlinesBeforeNext) : '\n'
+            return '\n' + smtpSection + '\n\n' + spacingBeforeNext
+          }
+          return '\n' + smtpSection + '\n\n'
+        }
+      }),
       action: 'update',
     }
   }
@@ -232,16 +279,16 @@ sender_name = "env(SMTP_SENDER_NAME)"`
       const afterWithNewline = after ? `\n${after}` : ''
 
       return {
-        content: `${beforeWithNewline}${smtpSection}${afterWithNewline}`,
+        content: `${beforeWithNewline}\n${smtpSection}\n${afterWithNewline}`,
         action: 'append',
       }
     }
   }
 
   // Append at the end
-  const newLine = content && !content.endsWith('\n') ? '\n' : ''
+  const separator = content && !content.endsWith('\n') ? '\n\n' : '\n'
   return {
-    content: `${content}${newLine}${smtpSection}\n`,
+    content: `${content}${separator}${smtpSection}\n`,
     action: 'append',
   }
 }
@@ -406,11 +453,16 @@ const applyChanges = (
 /**
  * Shows summary of proposed changes
  */
-const showSummary = (config: InitConfig, changes: ProposedChanges): void => {
+const showSummary = (
+  config: InitConfig,
+  changes: ProposedChanges,
+  baseUrl: string
+): void => {
   console.log('\n📋 Configuration Summary\n')
   console.log(`HTTP Port: ${config.httpPort}`)
   console.log(`SMTP Port: ${config.smtpPort}`)
   console.log(`SMTP Host: ${config.smtpHost}`)
+  console.log(`RESEND_BASE_URL: ${baseUrl}`)
   console.log('\n📝 Proposed Changes:\n')
 
   if (changes.envFile) {
@@ -450,11 +502,58 @@ export const initCommand = async (baseUrl?: string): Promise<void> => {
   const httpPort = ports.httpPort
   const smtpPort = ports.smtpPort
 
-  // Use provided baseUrl or construct from detected ports
-  const finalBaseUrl = baseUrl || `http://127.0.0.1:${httpPort}`
+  // Detect if this is a Supabase project
+  const isSupabaseProject = detectSupabaseProject(cwd)
 
-  // Detect SMTP host context
-  const smtpHost = detectSmtpHost(cwd)
+  let finalBaseUrl: string
+  let smtpHost: string
+  let summaryShown = false
+
+  // If baseUrl is provided, use it and don't ask questions
+  if (baseUrl) {
+    finalBaseUrl = baseUrl
+    smtpHost = '127.0.0.1'
+  } else if (isSupabaseProject) {
+    // Show preview of what will be updated with Supabase-compatible settings
+    const previewBaseUrl = `http://host.docker.internal:${httpPort}`
+    const previewSmtpHost = 'host.docker.internal'
+    const previewConfig: InitConfig = {
+      httpPort,
+      smtpPort,
+      smtpHost: previewSmtpHost,
+    }
+    const previewChanges = analyzeChanges(cwd, previewConfig, previewBaseUrl)
+
+    console.log('\n🔍 Supabase project detected!\n')
+    showSummary(previewConfig, previewChanges, previewBaseUrl)
+    summaryShown = true
+
+    // Ask for Supabase-compatible configuration
+    const useSupabaseConfig = await askConfirmation(
+      'We have detected a Supabase project, do you want to set all env variables Supabase compatible?'
+    )
+
+    if (useSupabaseConfig) {
+      finalBaseUrl = previewBaseUrl
+      smtpHost = previewSmtpHost
+    } else {
+      finalBaseUrl = `http://127.0.0.1:${httpPort}`
+      smtpHost = '127.0.0.1'
+      // Show summary with localhost values since user chose not to use Supabase config
+      const localConfig: InitConfig = {
+        httpPort,
+        smtpPort,
+        smtpHost,
+      }
+      const localChanges = analyzeChanges(cwd, localConfig, finalBaseUrl)
+      showSummary(localConfig, localChanges, finalBaseUrl)
+      summaryShown = true
+    }
+  } else {
+    // Not a Supabase project, use localhost without asking
+    finalBaseUrl = `http://127.0.0.1:${httpPort}`
+    smtpHost = '127.0.0.1'
+  }
 
   const config: InitConfig = {
     httpPort,
@@ -465,21 +564,15 @@ export const initCommand = async (baseUrl?: string): Promise<void> => {
   // Analyze what changes need to be made
   const changes = analyzeChanges(cwd, config, finalBaseUrl)
 
-  // Show summary
-  showSummary(config, changes)
+  // Show summary if we haven't shown it yet
+  if (!summaryShown) {
+    showSummary(config, changes, finalBaseUrl)
+  }
 
   // If no changes needed, exit early
   if (!changes.envFile && !changes.configToml) {
     console.log('💡 Your Resend SDK is already configured!')
     console.log('   Start the sandbox with: npx resend-box start\n')
-    return
-  }
-
-  // Ask for confirmation
-  const confirmed = await askConfirmation('Do you want to apply these changes?')
-
-  if (!confirmed) {
-    console.log('\n❌ Cancelled. No changes were made.\n')
     return
   }
 
