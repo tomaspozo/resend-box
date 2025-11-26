@@ -7,13 +7,11 @@ import { useNavigate } from 'react-router-dom'
 
 export const EmailsListPage = () => {
   const [emails, setEmails] = useState<Email[]>([])
-  const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const navigate = useNavigate()
 
   const loadEmails = async () => {
     try {
-      setLoading(true)
       setError(null)
       const data = await fetchEmails()
       setEmails(data)
@@ -22,8 +20,6 @@ export const EmailsListPage = () => {
         err instanceof Error ? err.message : 'Failed to load emails'
       setError(message)
       console.error('Failed to load emails:', err)
-    } finally {
-      setLoading(false)
     }
   }
 
@@ -40,11 +36,7 @@ export const EmailsListPage = () => {
 
   return (
     <>
-      <EmailList
-        emails={emails}
-        loading={loading}
-        onEmailClick={handleEmailClick}
-      />
+      <EmailList emails={emails} onEmailClick={handleEmailClick} />
       {error && (
         <ErrorNotification message={error} onDismiss={() => setError(null)} />
       )}

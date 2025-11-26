@@ -36,13 +36,9 @@ const formatRelativeTime = (timestamp: number): string => {
   return new Date(timestamp).toLocaleDateString()
 }
 
-export const EmailList = ({
-  emails,
-  loading,
-  onEmailClick,
-}: EmailListProps) => {
+export const EmailList = ({ emails, onEmailClick }: EmailListProps) => {
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full relative">
       {/* Header */}
       <div className="border-b p-6 pt-0 xl:pt-6">
         <h1 className="text-3xl font-bold">Emails</h1>
@@ -50,14 +46,12 @@ export const EmailList = ({
 
       {/* Table */}
       <div className="flex-1 overflow-auto">
-        {loading && emails.length === 0 ? (
-          <div className="flex items-center justify-center h-full text-muted-foreground">
-            Loading...
-          </div>
-        ) : emails.length === 0 ? (
+        {emails.length === 0 ? (
           <div className="flex flex-col -mt-10 items-center justify-center h-full text-center px-6">
             <div className="mb-6">
-              <Inbox className="h-16 w-16 text-muted-foreground/40 mx-auto" />
+              <div className="bg-muted/10 rounded p-4">
+                <Inbox className="h-16 w-16 text-muted-foreground/60 mx-auto" />
+              </div>
             </div>
             <h2 className="text-2xl font-semibold mb-2">No emails yet</h2>
             <p className="text-muted-foreground mb-6 max-w-md">
