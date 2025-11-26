@@ -11,7 +11,7 @@ A local email sandbox that acts as both a Resend API mock and an SMTP server, wi
 
 ### Limitations
 
-- Currently the API server only supports the `POST /emails` endpoint (`resend.emails.send`)
+- The Resend API Mock only implements the `POST /emails` endpoint (`resend.emails.send`). Other Resend API endpoints are not supported.
 
 ## Installation
 
