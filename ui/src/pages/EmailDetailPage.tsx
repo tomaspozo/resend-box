@@ -37,10 +37,6 @@ export const EmailDetailPage = () => {
     loadEmail();
   }, [id, navigate]);
 
-  const handleBack = () => {
-    navigate("/ui/emails");
-  };
-
   if (loading) {
     return (
       <div className="flex items-center justify-center h-full text-muted-foreground">
@@ -64,7 +60,7 @@ export const EmailDetailPage = () => {
 
   return (
     <>
-      <EmailDetail email={email} onBack={handleBack} />
+      <EmailDetail email={email} />
       {error && (
         <div className="fixed bottom-4 right-4 bg-destructive text-destructive-foreground px-4 py-3 rounded-md shadow-lg max-w-md">
           {error}

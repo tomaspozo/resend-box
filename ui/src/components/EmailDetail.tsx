@@ -10,7 +10,6 @@ import type { Email } from "@/types";
 
 interface EmailDetailProps {
   email: Email | null;
-  onBack: () => void;
   onDelete?: (id: string) => void;
 }
 
@@ -245,7 +244,7 @@ const processHtmlForIframe = (html: string): string => {
   });
 };
 
-export const EmailDetail = ({ email, onBack }: EmailDetailProps) => {
+export const EmailDetail = ({ email }: EmailDetailProps) => {
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("preview");
 
