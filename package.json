@@ -6,6 +6,7 @@
   "bin": {
     "resend-box": "./dist/cli.js"
   },
+  "repository": "https://github.com/tomaspozo/resend-box",
   "scripts": {
     "build": "tsc && npm run build:ui",
     "build:ui": "cd ui && npm run build",
