@@ -44,7 +44,7 @@ export const EmailList = ({
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="border-b p-6">
+      <div className="border-b p-6 pt-0 xl:pt-6">
         <h1 className="text-3xl font-bold">Emails</h1>
       </div>
 

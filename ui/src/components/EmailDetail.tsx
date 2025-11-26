@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Copy, Check, ArrowLeft, Mail } from "lucide-react";
+import { Copy, Check, Mail } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -288,20 +288,10 @@ export const EmailDetail = ({ email, onBack }: EmailDetailProps) => {
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="border-b p-6">
-        <div className="flex items-center justify-between mb-6">
-          <Button variant="ghost" size="sm" onClick={onBack} className="gap-2">
-            <ArrowLeft className="h-4 w-4" />
-            Back
-          </Button>
-          <div className="flex items-center gap-2">
-            {/* Space for future action buttons */}
-          </div>
-        </div>
-
+      <div className="border-b p-6 pt-0 xl:pt-6">
         <div className="flex items-center gap-4">
-          <div className="size-12 rounded-lg inline-flex select-none items-center font-medium truncate bg-zinc-300/30 text-zinc-600 dark:bg-zinc-700/30 dark:text-zinc-400 border border-transparent mx-auto justify-center">
-            <Mail className="h-6 w-6" />
+          <div className="size-14 rounded-lg inline-flex select-none items-center font-medium truncate bg-zinc-300/30 text-zinc-600 dark:bg-zinc-700/30 dark:text-zinc-400 border border-transparent mx-auto justify-center">
+            <Mail className="size-7" />
           </div>
           <div className="flex-1">
             <div className="flex">
@@ -328,11 +318,11 @@ export const EmailDetail = ({ email, onBack }: EmailDetailProps) => {
             <div className="text-sm text-muted-foreground mb-1">SUBJECT</div>
             <div className="text-sm font-medium">{email.subject}</div>
           </div>
-          <div>
+          {/* <div>
             <div className="text-sm text-muted-foreground mb-1">TO</div>
             <div className="text-sm font-medium">{email.to.join(", ")}</div>
-          </div>
-          <div>
+          </div> */}
+          {/* <div>
             <div className="text-sm text-muted-foreground mb-1">ID</div>
             <div className="flex items-center gap-2">
               <span className="text-sm font-mono">{email.id}</span>
@@ -350,7 +340,7 @@ export const EmailDetail = ({ email, onBack }: EmailDetailProps) => {
                 )}
               </Button>
             </div>
-          </div>
+          </div> */}
         </div>
       </div>
 

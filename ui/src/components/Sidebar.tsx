@@ -72,7 +72,7 @@ export const Sidebar = ({
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 overflow-y-auto p-2">
+      <nav className="flex-1 flex flex-col gap-1 overflow-y-auto px-3 py-6">
         {navigationItems.map((item) => {
           const Icon = item.icon;
           const isActive = location.pathname.startsWith(item.path);
