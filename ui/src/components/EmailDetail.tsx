@@ -1,12 +1,5 @@
 import { useState } from "react";
-import {
-  Copy,
-  Check,
-  ArrowLeft,
-  Code,
-  MoreHorizontal,
-  Mail,
-} from "lucide-react";
+import { Copy, Check, ArrowLeft, Mail } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -154,6 +147,104 @@ const formatValue = (value: unknown): string => {
   return str === "[object Object]" ? JSON.stringify(value) : str;
 };
 
+/**
+ * Processes HTML content to make all links open in a new tab
+ * Adds target="_blank" and rel="noopener noreferrer" to all anchor tags
+ * Also injects JavaScript to intercept clicks and ensure links open in new tabs
+ */
+const processHtmlForIframe = (html: string): string => {
+  // Use DOMParser if available (browser environment)
+  if (typeof DOMParser !== "undefined") {
+    const parser = new DOMParser();
+    // Check if HTML is a full document or just a fragment
+    const isFullDocument = /^\s*<!DOCTYPE|^\s*<html/i.test(html);
+    const doc = parser.parseFromString(html, "text/html");
+    const links = doc.querySelectorAll("a");
+
+    links.forEach((link) => {
+      link.setAttribute("target", "_blank");
+      // Preserve existing rel attributes and add noopener noreferrer
+      const existingRel = link.getAttribute("rel") || "";
+      const relParts = existingRel.split(/\s+/).filter(Boolean);
+      if (!relParts.includes("noopener")) relParts.push("noopener");
+      if (!relParts.includes("noreferrer")) relParts.push("noreferrer");
+      link.setAttribute("rel", relParts.join(" "));
+    });
+
+    // Inject the click interceptor script
+    const scriptElement = doc.createElement("script");
+    scriptElement.textContent = `
+      (function() {
+        document.addEventListener('click', function(e) {
+          const link = e.target.closest('a');
+          if (link && link.href) {
+            e.preventDefault();
+            e.stopPropagation();
+            window.open(link.href, '_blank', 'noopener,noreferrer');
+            return false;
+          }
+        }, true);
+      })();
+    `;
+
+    // Ensure we have a head element to inject the script
+    let head = doc.head;
+    if (!head) {
+      head = doc.createElement("head");
+      const htmlElement = doc.documentElement;
+      const bodyElement = doc.body;
+      if (htmlElement) {
+        if (bodyElement) {
+          htmlElement.insertBefore(head, bodyElement);
+        } else {
+          htmlElement.appendChild(head);
+        }
+      }
+    }
+    head.appendChild(scriptElement);
+
+    // Return full document structure if original was a full document, otherwise just body content
+    if (isFullDocument) {
+      return doc.documentElement.outerHTML;
+    }
+    const body = doc.body;
+    return body ? body.innerHTML : doc.documentElement.innerHTML;
+  }
+
+  // Fallback: regex-based approach for environments without DOMParser
+  // Match <a> tags with or without existing attributes
+  return html.replace(/<a\s+([^>]*?)>/gi, (_match, attributes: string) => {
+    // Check if target already exists
+    if (/\btarget\s*=/i.test(attributes)) {
+      // Replace existing target attribute
+      attributes = attributes.replace(
+        /\btarget\s*=\s*["'][^"']*["']/gi,
+        'target="_blank"'
+      );
+    } else {
+      // Add target attribute
+      attributes = `${attributes} target="_blank"`;
+    }
+
+    // Check if rel already exists
+    if (/\brel\s*=/i.test(attributes)) {
+      // Add noopener noreferrer to existing rel if not present
+      if (!/\bnoopener\b/i.test(attributes)) {
+        attributes = attributes.replace(
+          /\brel\s*=\s*["']([^"']*)["']/gi,
+          (_relMatch: string, relValue: string) =>
+            `rel="${relValue} noopener noreferrer"`
+        );
+      }
+    } else {
+      // Add rel attribute
+      attributes = `${attributes} rel="noopener noreferrer"`;
+    }
+
+    return `<a ${attributes}>`;
+  });
+};
+
 export const EmailDetail = ({ email, onBack }: EmailDetailProps) => {
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("preview");
@@ -204,16 +295,7 @@ export const EmailDetail = ({ email, onBack }: EmailDetailProps) => {
             Back
           </Button>
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" className="gap-2">
-              <Code className="h-4 w-4" />
-              API
-            </Button>
-            <Button variant="outline" size="sm">
-              A
-            </Button>
-            <Button variant="outline" size="icon">
-              <MoreHorizontal className="h-4 w-4" />
-            </Button>
+            {/* Space for future action buttons */}
           </div>
         </div>
 
@@ -317,9 +399,9 @@ export const EmailDetail = ({ email, onBack }: EmailDetailProps) => {
               {email.html ? (
                 <div className="bg-white dark:bg-zinc-900 rounded-lg border h-full overflow-hidden">
                   <iframe
-                    srcDoc={email.html}
+                    srcDoc={processHtmlForIframe(email.html)}
                     className="w-full h-full border-0"
-                    sandbox="allow-same-origin"
+                    sandbox="allow-same-origin allow-scripts allow-popups allow-popups-to-escape-sandbox"
                     title="Email preview"
                     style={{
                       display: "block",
@@ -499,11 +581,13 @@ export const EmailDetail = ({ email, onBack }: EmailDetailProps) => {
                     No request data available
                   </div>
                 )}
-                {email.source === "smtp" && !email.raw?.headers && !email.raw?.mime && (
-                  <div className="text-muted-foreground p-4 border rounded">
-                    No raw data available
-                  </div>
-                )}
+                {email.source === "smtp" &&
+                  !email.raw?.headers &&
+                  !email.raw?.mime && (
+                    <div className="text-muted-foreground p-4 border rounded">
+                      No raw data available
+                    </div>
+                  )}
               </div>
             </TabsContent>
           </Tabs>
