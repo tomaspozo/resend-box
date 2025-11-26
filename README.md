@@ -5,11 +5,13 @@ A local email sandbox that acts as both a Resend API mock and an SMTP server, wi
 ## Features
 
 - 🎯 **Resend API Compatible**: Mock the Resend API for local development
+- 🚀 **Resend `emails.send` Compatible**: Seamlessly send emails to your local sandbox using text, HTML, or React components via the Resend SDK.
 - 📧 **SMTP Server**: Accept emails via SMTP protocol
-- 🎨 **Modern UI**: Beautiful web interface built with React and shadcn/ui
-- 🚀 **Easy Setup**: One command to configure your project
 - 🔍 **Email Inspection**: View HTML, text, and raw MIME content
-- 🔄 **Real-time Updates**: Auto-refreshing email list
+
+### Limitations
+
+- Currently the API server only supports the `POST /emails` endpoint (`resend.emails.send`)
 
 ## Installation
 
@@ -21,18 +23,18 @@ npx resend-box
 
 ## Quick Start
 
-1. **Initialize your project** (optional, but recommended):
+1. **Initialize your project** (recommended):
 
    ```bash
    npx resend-box init
    ```
 
-   This will configure `RESEND_BASE_URL` in your `.env.local` or `.env` file.
+[Learn more](#init-command)
 
 2. **Start the sandbox**:
 
    ```bash
-   npx resend-box
+   npx resend-box start
    ```
 
 3. **View captured emails**:
@@ -42,7 +44,7 @@ npx resend-box
 
 ### Resend SDK
 
-After running `init`, your Resend SDK will automatically use the local sandbox:
+`RESEND_BASE_URL` will be loaded by the Resend SDK automatically. No changes needed to your code.
 
 ```typescript
 import { Resend } from 'resend'
@@ -57,17 +59,12 @@ const { data } = await resend.emails.send({
 })
 ```
 
-### SMTP
-
-Configure your application to send emails via SMTP to `127.0.0.1:1025` (default port).
-
 ## Configuration
 
 ### Default Ports
 
-- **HTTP API (Resend mock)**: `4657`
-- **SMTP**: `1025`
-- **Web UI**: `4657` (same as HTTP API)
+- **HTTP port (serves API and UI)**: `4657`
+- **SMTP port**: `1025`
 
 ### CLI Options
 
@@ -84,18 +81,33 @@ RESEND_SANDBOX_HTTP_PORT=3000 RESEND_SANDBOX_SMTP_PORT=2525 npx resend-box
 ### CLI Commands
 
 ```bash
-# Start the sandbox (default command)
-npx resend-box
-# or
+# Start the sandbox
 npx resend-box start
 
-# Initialize RESEND_BASE_URL in your project
+# Initialize configuration in your project
 npx resend-box init
 npx resend-box init --base-url http://127.0.0.1:3000
+
+# Use custom ports for init
+RESEND_SANDBOX_HTTP_PORT=3000 RESEND_SANDBOX_SMTP_PORT=2525 npx resend-box init
 
 # Show help
 npx resend-box --help
 ```
+
+### Init Command
+
+The `init` command automatically:
+
+- Configures `.env.local` or `.env` with:
+  - `RESEND_API_KEY` (generates a demo key if missing)
+  - `RESEND_BASE_URL` (points to local sandbox)
+  - SMTP settings (`SMTP_HOST`, `SMTP_PORT`, etc.)
+- Updates Supabase `config.toml` if a Supabase project is detected
+- Detects project context:
+  - `host.docker.internal` for Supabase/Docker projects
+  - `127.0.0.1` for local development
+- Shows a summary and asks for confirmation before making changes
 
 ## Architecture
 
@@ -105,13 +117,13 @@ Resend Box consists of three main components:
 2. **SMTP Server** (port 1025): Accepts emails via SMTP protocol and normalizes them to the same format
 3. **Web API & UI** (`/sandbox/*`): Provides REST endpoints for the UI and serves the React application
 
-All emails are stored in an in-memory store that persists for the lifetime of the server process. The store normalizes emails from both sources (Resend API and SMTP) into a unified format.
+All emails are stored in an in-memory store that persists for the lifetime of the server process. The store normalizes emails from both sources (Resend API and SMTP) into a unified format which is accessible from the UI.
 
 ### Data Flow
 
 ```
-┌─────────────┐         ┌──────────────┐
-│ Resend SDK  │────────▶│ Resend API   │
+┌─────────────┐         ┌───────────────┐
+│ Resend SDK  │────────▶│ Resend API    │
 │             │         │ Mock (/emails)│
 └─────────────┘         └───────┬───────┘
                                 │
@@ -132,22 +144,9 @@ All emails are stored in an in-memory store that persists for the lifetime of th
                                 │
                          ┌──────▼───────┐
                          │  React UI    │
-                         │  (port 4657) │
+                         │  (/ui/*)     │
                          └──────────────┘
 ```
-
-## Web UI Features
-
-The web UI provides:
-
-- **Email List**: View all captured emails in reverse chronological order
-- **Search**: Filter emails by subject, sender, or recipient
-- **Source Filter**: Filter by `resend` or `smtp` source
-- **Email Details**: View HTML, text, and raw MIME content
-- **Copy to Clipboard**: Copy email addresses and subjects
-- **Relative Timestamps**: See when emails were received (e.g., "2 minutes ago")
-- **Auto-refresh**: Email list updates every 2 seconds
-- **Delete**: Remove individual emails or clear all
 
 ## API Endpoints
 
@@ -180,22 +179,36 @@ The web UI provides:
 
 ## Usage Examples
 
-### Resend SDK
+### Resend SDK from Supabase Edge Function
 
 ```typescript
-import { Resend } from 'resend'
+// supabase/functions/send-email/index.ts
+import { Resend } from 'https://esm.sh/resend@3.0.0'
+import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 
-const resend = new Resend('re_test_...')
+serve(async (req) => {
+  // After running 'resend-box init', RESEND_API_KEY and RESEND_BASE_URL are set
+  const resend = new Resend(Deno.env.get('RESEND_API_KEY'))
 
-// After running 'resend-box init', this will use the local sandbox
-const { data } = await resend.emails.send({
-  from: 'you@example.com',
-  to: 'user@gmail.com',
-  subject: 'Hello',
-  html: '<p>Hello world!</p>',
+  const { data, error } = await resend.emails.send({
+    from: 'you@example.com',
+    to: 'user@gmail.com',
+    subject: 'Hello',
+    html: '<p>Hello world!</p>',
+  })
+
+  if (error) {
+    return new Response(JSON.stringify({ error }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json' },
+    })
+  }
+
+  return new Response(JSON.stringify({ id: data?.id }), {
+    status: 200,
+    headers: { 'Content-Type': 'application/json' },
+  })
 })
-
-console.log('Email ID:', data.id)
 ```
 
 ### SMTP (Node.js with nodemailer)
@@ -204,9 +217,13 @@ console.log('Email ID:', data.id)
 import nodemailer from 'nodemailer'
 
 const transporter = nodemailer.createTransport({
-  host: '127.0.0.1',
-  port: 1025,
+  host: process.env.SMTP_HOST || '127.0.0.1',
+  port: parseInt(process.env.SMTP_PORT || '1025', 10),
   secure: false,
+  auth: {
+    user: process.env.SMTP_USER || 'admin',
+    pass: process.env.SMTP_PASSWORD || 'admin',
+  },
 })
 
 await transporter.sendMail({
@@ -221,6 +238,7 @@ await transporter.sendMail({
 ### SMTP (Python)
 
 ```python
+import os
 import smtplib
 from email.mime.text import MIMEText
 
@@ -229,7 +247,13 @@ msg['Subject'] = 'Test Email'
 msg['From'] = 'sender@example.com'
 msg['To'] = 'recipient@example.com'
 
-server = smtplib.SMTP('127.0.0.1', 1025)
+host = os.getenv('SMTP_HOST', '127.0.0.1')
+port = int(os.getenv('SMTP_PORT', '1025'))
+user = os.getenv('SMTP_USER', 'admin')
+password = os.getenv('SMTP_PASSWORD', 'admin')
+
+server = smtplib.SMTP(host, port)
+server.login(user, password)
 server.send_message(msg)
 server.quit()
 ```
@@ -254,25 +278,10 @@ curl http://127.0.0.1:4657/sandbox/emails
 curl http://127.0.0.1:4657/sandbox/emails/{email-id}
 ```
 
-## Development
-
-```bash
-# Install dependencies
-npm install
-
-# Run in development mode
-npm run dev
-
-# Build for production
-npm run build
-
-# Run tests
-npm test
-
-# Type check
-npm run typecheck
-```
-
 ## License
 
 MIT
+
+---
+
+Built with coffee and Cursor by [Tomás Pozo](https://x.com/tomaspozo_)
