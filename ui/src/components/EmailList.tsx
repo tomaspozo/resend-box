@@ -1,5 +1,5 @@
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import {
   Table,
   TableBody,
@@ -7,34 +7,34 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
-import { Inbox, Settings } from "lucide-react";
-import { Link } from "react-router-dom";
+} from '@/components/ui/table'
+import { Inbox, Settings } from 'lucide-react'
+import { Link } from 'react-router-dom'
 
-import { API_BADGE_CLASSES, SMTP_BADGE_CLASSES } from "@/lib/constants";
+import { API_BADGE_CLASSES, SMTP_BADGE_CLASSES } from '@/lib/constants'
 
-import type { Email } from "@/types";
+import type { Email } from '@/types'
 
 interface EmailListProps {
-  emails: Email[];
-  loading?: boolean;
-  onEmailClick: (email: Email) => void;
+  emails: Email[]
+  loading?: boolean
+  onEmailClick: (email: Email) => void
 }
 
 const formatRelativeTime = (timestamp: number): string => {
-  const now = Date.now();
-  const diff = now - timestamp;
-  const seconds = Math.floor(diff / 1000);
-  const minutes = Math.floor(seconds / 60);
-  const hours = Math.floor(minutes / 60);
-  const days = Math.floor(hours / 24);
+  const now = Date.now()
+  const diff = now - timestamp
+  const seconds = Math.floor(diff / 1000)
+  const minutes = Math.floor(seconds / 60)
+  const hours = Math.floor(minutes / 60)
+  const days = Math.floor(hours / 24)
 
-  if (seconds < 60) return "just now";
-  if (minutes < 60) return `${minutes} minute${minutes !== 1 ? "s" : ""} ago`;
-  if (hours < 24) return `${hours} hour${hours !== 1 ? "s" : ""} ago`;
-  if (days < 7) return `${days} day${days !== 1 ? "s" : ""} ago`;
-  return new Date(timestamp).toLocaleDateString();
-};
+  if (seconds < 60) return 'just now'
+  if (minutes < 60) return `${minutes} minute${minutes !== 1 ? 's' : ''} ago`
+  if (hours < 24) return `${hours} hour${hours !== 1 ? 's' : ''} ago`
+  if (days < 7) return `${days} day${days !== 1 ? 's' : ''} ago`
+  return new Date(timestamp).toLocaleDateString()
+}
 
 export const EmailList = ({
   emails,
@@ -92,16 +92,16 @@ export const EmailList = ({
                     <Badge
                       variant="outline"
                       className={
-                        email.source === "resend"
+                        email.source === 'resend'
                           ? API_BADGE_CLASSES
                           : SMTP_BADGE_CLASSES
                       }
                     >
-                      {email.source === "resend" ? "API" : "SMTP"}
+                      {email.source === 'resend' ? 'API' : 'SMTP'}
                     </Badge>
                   </TableCell>
                   <TableCell className="font-medium">
-                    {email.to.join(", ")}
+                    {email.to.join(', ')}
                   </TableCell>
                   <TableCell>{email.subject}</TableCell>
                   <TableCell className="text-muted-foreground">
@@ -114,5 +114,5 @@ export const EmailList = ({
         )}
       </div>
     </div>
-  );
-};
+  )
+}

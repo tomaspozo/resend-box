@@ -22,12 +22,15 @@ npx resend-box
 ## Quick Start
 
 1. **Initialize your project** (optional, but recommended):
+
    ```bash
    npx resend-box init
    ```
+
    This will configure `RESEND_BASE_URL` in your `.env.local` or `.env` file.
 
 2. **Start the sandbox**:
+
    ```bash
    npx resend-box
    ```
@@ -42,16 +45,16 @@ npx resend-box
 After running `init`, your Resend SDK will automatically use the local sandbox:
 
 ```typescript
-import { Resend } from 'resend';
+import { Resend } from 'resend'
 
-const resend = new Resend('re_test_...');
+const resend = new Resend('re_test_...')
 
 const { data } = await resend.emails.send({
   from: 'you@example.com',
   to: 'user@gmail.com',
   subject: 'Hello',
   html: '<p>Hello world!</p>',
-});
+})
 ```
 
 ### SMTP
@@ -151,22 +154,27 @@ The web UI provides:
 ### Resend API Mock
 
 **POST** `/emails`
+
 - Accepts Resend-compatible email payloads
 - Returns: `{ id: string, created_at: string, to: string[], from: string }`
 
 ### Web API (for UI)
 
 **GET** `/sandbox/emails`
+
 - Returns: `{ emails: Email[] }` (newest first)
 
 **GET** `/sandbox/emails/:id`
+
 - Returns: `{ email: Email }` or `404 { error: string }`
 
 **DELETE** `/sandbox/emails`
+
 - Clears all emails
 - Returns: `{ message: string }`
 
 **DELETE** `/sandbox/emails/:id`
+
 - Deletes a specific email
 - Returns: `{ message: string }` or `404 { error: string }`
 
@@ -175,9 +183,9 @@ The web UI provides:
 ### Resend SDK
 
 ```typescript
-import { Resend } from 'resend';
+import { Resend } from 'resend'
 
-const resend = new Resend('re_test_...');
+const resend = new Resend('re_test_...')
 
 // After running 'resend-box init', this will use the local sandbox
 const { data } = await resend.emails.send({
@@ -185,21 +193,21 @@ const { data } = await resend.emails.send({
   to: 'user@gmail.com',
   subject: 'Hello',
   html: '<p>Hello world!</p>',
-});
+})
 
-console.log('Email ID:', data.id);
+console.log('Email ID:', data.id)
 ```
 
 ### SMTP (Node.js with nodemailer)
 
 ```typescript
-import nodemailer from 'nodemailer';
+import nodemailer from 'nodemailer'
 
 const transporter = nodemailer.createTransport({
   host: '127.0.0.1',
   port: 1025,
   secure: false,
-});
+})
 
 await transporter.sendMail({
   from: 'sender@example.com',
@@ -207,7 +215,7 @@ await transporter.sendMail({
   subject: 'Test Email',
   text: 'Hello from SMTP!',
   html: '<p>Hello from SMTP!</p>',
-});
+})
 ```
 
 ### SMTP (Python)
@@ -268,4 +276,3 @@ npm run typecheck
 ## License
 
 MIT
-

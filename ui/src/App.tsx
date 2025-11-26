@@ -1,8 +1,8 @@
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { DashboardLayout } from "@/components/DashboardLayout";
-import { EmailsListPage } from "@/pages/EmailsListPage";
-import { EmailDetailPage } from "@/pages/EmailDetailPage";
-import { SettingsPage } from "@/pages/SettingsPage";
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { DashboardLayout } from '@/components/DashboardLayout'
+import { EmailsListPage } from '@/pages/EmailsListPage'
+import { EmailDetailPage } from '@/pages/EmailDetailPage'
+import { SettingsPage } from '@/pages/SettingsPage'
 
 function App() {
   return (
@@ -17,7 +17,7 @@ function App() {
         <Route path="/" element={<Navigate to="/ui/emails" replace />} />
       </Routes>
     </BrowserRouter>
-  );
+  )
 }
 
-export default App;
+export default App

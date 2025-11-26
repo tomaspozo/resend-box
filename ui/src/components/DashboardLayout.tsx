@@ -1,13 +1,13 @@
-import { Github } from "lucide-react";
-import { Button } from "./ui/button";
-import { Sidebar } from "./Sidebar";
-import { Outlet, useLocation } from "react-router-dom";
+import { Github } from 'lucide-react'
+import { Button } from './ui/button'
+import { Sidebar } from './Sidebar'
+import { Outlet, useLocation } from 'react-router-dom'
 
 export const DashboardLayout = () => {
-  const location = useLocation();
-  const currentView = location.pathname.startsWith("/ui/emails")
-    ? "emails"
-    : "settings";
+  const location = useLocation()
+  const currentView = location.pathname.startsWith('/ui/emails')
+    ? 'emails'
+    : 'settings'
 
   return (
     <div className="flex h-screen bg-background overflow-hidden">
@@ -37,5 +37,5 @@ export const DashboardLayout = () => {
         </main>
       </div>
     </div>
-  );
-};
+  )
+}

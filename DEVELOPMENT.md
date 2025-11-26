@@ -36,6 +36,7 @@ npm run dev
 ```
 
 This starts:
+
 - Resend API mock at `http://127.0.0.1:4657/emails`
 - SMTP server at `127.0.0.1:1025`
 - Web API at `http://127.0.0.1:4657/sandbox/*`
@@ -47,16 +48,19 @@ This starts:
 Run both backend and UI in development mode:
 
 **Terminal 1 - Backend:**
+
 ```bash
 npm run dev
 ```
 
 **Terminal 2 - UI:**
+
 ```bash
 npm run dev:ui
 ```
 
 This starts:
+
 - Backend at `http://127.0.0.1:4657`
 - UI dev server at `http://127.0.0.1:5173` (or another port if 5173 is taken)
 
@@ -71,6 +75,7 @@ npm run build
 ```
 
 This compiles:
+
 - TypeScript backend code to `dist/`
 - React UI to `dist/ui/`
 
@@ -230,16 +235,19 @@ QUIT
 ### Common Issues
 
 **Port already in use:**
+
 ```bash
 # Use different ports
 node dist/cli.js start --http-port 3000 --smtp-port 2525
 ```
 
 **UI not loading:**
+
 - Make sure you've built the UI: `npm run build:ui`
 - Or run UI in dev mode: `npm run dev:ui`
 
 **TypeScript errors:**
+
 - Run `npm run typecheck` to see all type errors
 - Make sure all dependencies are installed
 
@@ -260,6 +268,7 @@ node dist/cli.js start --http-port 3000 --smtp-port 2525
 ### Testing Changes
 
 After making changes:
+
 1. Run tests: `npm test`
 2. Type check: `npm run typecheck`
 3. Test manually by sending emails via Resend SDK or SMTP
@@ -287,7 +296,7 @@ npm publish
 See `.env.example` for available environment variables.
 
 Key variables:
+
 - `RESEND_BASE_URL`: Used by projects to point Resend SDK to sandbox
 - `RESEND_SANDBOX_HTTP_PORT`: Override HTTP port (default: 4657)
 - `RESEND_SANDBOX_SMTP_PORT`: Override SMTP port (default: 1025)
-

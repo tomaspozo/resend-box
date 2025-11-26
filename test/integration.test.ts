@@ -3,50 +3,53 @@
  * Run with: npm test
  */
 
-import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
-import { createStore } from '../src/store.js';
-import { createResendApiServer } from '../src/resend-api.js';
-import { createSmtpServer } from '../src/smtp-server.js';
-import { createWebApiServer } from '../src/web-api.js';
-import type { EmailStore } from '../src/types.js';
-import express from 'express';
-import type { Server } from 'http';
-import { createConnection } from 'net';
+import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest'
+import { createStore } from '../src/store.js'
+import { createResendApiServer } from '../src/resend-api.js'
+import { createSmtpServer } from '../src/smtp-server.js'
+import { createWebApiServer } from '../src/web-api.js'
+import type { EmailStore } from '../src/types.js'
+import express from 'express'
+import type { Server } from 'http'
+import { createConnection } from 'net'
 
 /**
  * Helper function to send an email via SMTP
  */
-const sendSmtpEmail = async (port: number, email: {
-  from: string;
-  to: string | string[];
-  subject: string;
-  text?: string;
-  html?: string;
-}): Promise<void> => {
+const sendSmtpEmail = async (
+  port: number,
+  email: {
+    from: string
+    to: string | string[]
+    subject: string
+    text?: string
+    html?: string
+  }
+): Promise<void> => {
   return new Promise((resolve, reject) => {
-    const client = createConnection({ port, host: '127.0.0.1' });
-    let data = '';
+    const client = createConnection({ port, host: '127.0.0.1' })
+    let data = ''
 
     client.on('data', (chunk) => {
-      data += chunk.toString();
-      const lines = data.split('\r\n');
-      data = lines.pop() || '';
+      data += chunk.toString()
+      const lines = data.split('\r\n')
+      data = lines.pop() || ''
 
-      const lastLine = lines[lines.length - 1];
+      const lastLine = lines[lines.length - 1]
       if (lastLine?.startsWith('220')) {
         // Server greeting
-        client.write('EHLO 127.0.0.1\r\n');
+        client.write('EHLO 127.0.0.1\r\n')
       } else if (lastLine?.startsWith('250')) {
         if (lastLine.includes('EHLO')) {
-          client.write(`MAIL FROM:<${email.from}>\r\n`);
+          client.write(`MAIL FROM:<${email.from}>\r\n`)
         } else if (lastLine.includes('MAIL FROM')) {
-          const recipients = Array.isArray(email.to) ? email.to : [email.to];
-          client.write(`RCPT TO:<${recipients[0]}>\r\n`);
+          const recipients = Array.isArray(email.to) ? email.to : [email.to]
+          client.write(`RCPT TO:<${recipients[0]}>\r\n`)
         } else if (lastLine.includes('RCPT TO')) {
-          client.write('DATA\r\n');
+          client.write('DATA\r\n')
         } else if (lastLine.includes('354')) {
           // Start data
-          const recipients = Array.isArray(email.to) ? email.to : [email.to];
+          const recipients = Array.isArray(email.to) ? email.to : [email.to]
           const emailData = [
             `From: ${email.from}`,
             `To: ${recipients.join(', ')}`,
@@ -55,64 +58,66 @@ const sendSmtpEmail = async (port: number, email: {
             '',
             email.html || email.text || '',
             '.',
-            ''
-          ].filter(Boolean).join('\r\n');
-          client.write(emailData);
+            '',
+          ]
+            .filter(Boolean)
+            .join('\r\n')
+          client.write(emailData)
         } else if (lastLine?.startsWith('250') && lastLine.includes('queued')) {
-          client.write('QUIT\r\n');
+          client.write('QUIT\r\n')
         } else if (lastLine?.startsWith('221')) {
-          client.end();
-          resolve();
+          client.end()
+          resolve()
         }
       } else if (lastLine?.startsWith('5')) {
-        client.end();
-        reject(new Error(`SMTP error: ${lastLine}`));
+        client.end()
+        reject(new Error(`SMTP error: ${lastLine}`))
       }
-    });
+    })
 
-    client.on('error', reject);
+    client.on('error', reject)
     client.on('close', () => {
       if (!data.includes('221')) {
-        resolve(); // Assume success if connection closed
+        resolve() // Assume success if connection closed
       }
-    });
+    })
 
     setTimeout(() => {
-      client.end();
-      reject(new Error('SMTP connection timeout'));
-    }, 5000);
-  });
-};
+      client.end()
+      reject(new Error('SMTP connection timeout'))
+    }, 5000)
+  })
+}
 
 describe('Resend Box Integration', () => {
-  let store: EmailStore;
-  let httpServer: Server;
-  let smtpServer: ReturnType<typeof createSmtpServer>;
-  const httpPort = 4658; // Use different port for testing
-  const smtpPort = 1026; // Use different port for testing
+  let store: EmailStore
+  let httpServer: Server
+  let smtpServer: ReturnType<typeof createSmtpServer>
+  const httpPort = 4658 // Use different port for testing
+  const smtpPort = 1026 // Use different port for testing
 
   beforeAll(() => {
-    store = createStore();
-    const resendApi = createResendApiServer(store, httpPort);
-    const webApi = createWebApiServer(store, httpPort, smtpPort);
-    const app = express();
-    app.use(resendApi);
-    app.use(webApi);
-    httpServer = app.listen(httpPort);
-    smtpServer = createSmtpServer(store, smtpPort);
-  });
+    store = createStore()
+    const resendApi = createResendApiServer(store, httpPort)
+    const webApi = createWebApiServer(store, httpPort, smtpPort)
+    const app = express()
+    app.use(resendApi)
+    app.use(webApi)
+    httpServer = app.listen(httpPort)
+    smtpServer = createSmtpServer(store, smtpPort)
+  })
 
   beforeEach(() => {
     // Clear store before each test
-    store.emails = [];
-  });
+    store.emails = []
+  })
 
   afterAll(() => {
-    httpServer.close();
+    httpServer.close()
     if (typeof smtpServer.close === 'function') {
-      smtpServer.close();
+      smtpServer.close()
     }
-  });
+  })
 
   it('should accept Resend API emails', async () => {
     const response = await fetch(`http://127.0.0.1:${httpPort}/emails`, {
@@ -124,14 +129,14 @@ describe('Resend Box Integration', () => {
         subject: 'Test Email',
         text: 'This is a test email',
       }),
-    });
+    })
 
-    expect(response.ok).toBe(true);
-    const data = await response.json();
-    expect(data.id).toBeDefined();
-    expect(data.from).toBe('test@example.com');
-    expect(store.emails.length).toBe(1);
-  });
+    expect(response.ok).toBe(true)
+    const data = await response.json()
+    expect(data.id).toBeDefined()
+    expect(data.from).toBe('test@example.com')
+    expect(store.emails.length).toBe(1)
+  })
 
   it('should validate required fields', async () => {
     const response = await fetch(`http://127.0.0.1:${httpPort}/emails`, {
@@ -141,10 +146,10 @@ describe('Resend Box Integration', () => {
         from: 'test@example.com',
         // Missing 'to' and 'subject'
       }),
-    });
+    })
 
-    expect(response.status).toBe(400);
-  });
+    expect(response.status).toBe(400)
+  })
 
   it('should handle HTML emails', async () => {
     const response = await fetch(`http://127.0.0.1:${httpPort}/emails`, {
@@ -156,12 +161,12 @@ describe('Resend Box Integration', () => {
         subject: 'HTML Email',
         html: '<h1>Hello</h1><p>World</p>',
       }),
-    });
+    })
 
-    expect(response.ok).toBe(true);
-    const email = store.emails.find((e) => e.subject === 'HTML Email');
-    expect(email?.html).toBe('<h1>Hello</h1><p>World</p>');
-  });
+    expect(response.ok).toBe(true)
+    const email = store.emails.find((e) => e.subject === 'HTML Email')
+    expect(email?.html).toBe('<h1>Hello</h1><p>World</p>')
+  })
 
   it('should handle multiple recipients', async () => {
     const response = await fetch(`http://127.0.0.1:${httpPort}/emails`, {
@@ -173,14 +178,14 @@ describe('Resend Box Integration', () => {
         subject: 'Multi-recipient Email',
         text: 'Hello everyone',
       }),
-    });
+    })
 
-    expect(response.ok).toBe(true);
-    const data = await response.json();
-    expect(data.to).toEqual(['user1@example.com', 'user2@example.com']);
-    const email = store.emails.find((e) => e.id === data.id);
-    expect(email?.to).toEqual(['user1@example.com', 'user2@example.com']);
-  });
+    expect(response.ok).toBe(true)
+    const data = await response.json()
+    expect(data.to).toEqual(['user1@example.com', 'user2@example.com'])
+    const email = store.emails.find((e) => e.id === data.id)
+    expect(email?.to).toEqual(['user1@example.com', 'user2@example.com'])
+  })
 
   it('should handle CC and BCC fields', async () => {
     const response = await fetch(`http://127.0.0.1:${httpPort}/emails`, {
@@ -194,13 +199,13 @@ describe('Resend Box Integration', () => {
         subject: 'Email with CC/BCC',
         text: 'Hello',
       }),
-    });
+    })
 
-    expect(response.ok).toBe(true);
-    const email = store.emails.find((e) => e.subject === 'Email with CC/BCC');
-    expect(email?.cc).toEqual(['cc@example.com']);
-    expect(email?.bcc).toEqual(['bcc@example.com']);
-  });
+    expect(response.ok).toBe(true)
+    const email = store.emails.find((e) => e.subject === 'Email with CC/BCC')
+    expect(email?.cc).toEqual(['cc@example.com'])
+    expect(email?.bcc).toEqual(['bcc@example.com'])
+  })
 
   describe('SMTP Integration', () => {
     it('should accept emails via SMTP', async () => {
@@ -209,19 +214,19 @@ describe('Resend Box Integration', () => {
         to: 'recipient@example.com',
         subject: 'SMTP Test Email',
         text: 'This is a test email sent via SMTP',
-      });
+      })
 
       // Wait a bit for async processing
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 100))
 
-      expect(store.emails.length).toBe(1);
-      const email = store.emails[0];
-      expect(email.source).toBe('smtp');
-      expect(email.from).toBe('smtp@example.com');
-      expect(email.to).toContain('recipient@example.com');
-      expect(email.subject).toBe('SMTP Test Email');
-      expect(email.text).toContain('test email');
-    });
+      expect(store.emails.length).toBe(1)
+      const email = store.emails[0]
+      expect(email.source).toBe('smtp')
+      expect(email.from).toBe('smtp@example.com')
+      expect(email.to).toContain('recipient@example.com')
+      expect(email.subject).toBe('SMTP Test Email')
+      expect(email.text).toContain('test email')
+    })
 
     it('should handle HTML emails via SMTP', async () => {
       await sendSmtpEmail(smtpPort, {
@@ -229,14 +234,14 @@ describe('Resend Box Integration', () => {
         to: 'recipient@example.com',
         subject: 'SMTP HTML Email',
         html: '<h1>Hello from SMTP</h1><p>This is HTML</p>',
-      });
+      })
 
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 100))
 
-      const email = store.emails.find((e) => e.subject === 'SMTP HTML Email');
-      expect(email).toBeDefined();
-      expect(email?.html).toContain('Hello from SMTP');
-    });
+      const email = store.emails.find((e) => e.subject === 'SMTP HTML Email')
+      expect(email).toBeDefined()
+      expect(email?.html).toContain('Hello from SMTP')
+    })
 
     it('should preserve raw headers from SMTP emails', async () => {
       await sendSmtpEmail(smtpPort, {
@@ -244,15 +249,15 @@ describe('Resend Box Integration', () => {
         to: 'recipient@example.com',
         subject: 'SMTP with Headers',
         text: 'Test',
-      });
+      })
 
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 100))
 
-      const email = store.emails.find((e) => e.subject === 'SMTP with Headers');
-      expect(email?.raw).toBeDefined();
-      expect(email?.raw?.headers).toBeDefined();
-    });
-  });
+      const email = store.emails.find((e) => e.subject === 'SMTP with Headers')
+      expect(email?.raw).toBeDefined()
+      expect(email?.raw?.headers).toBeDefined()
+    })
+  })
 
   describe('Web API Integration', () => {
     beforeEach(async () => {
@@ -266,7 +271,7 @@ describe('Resend Box Integration', () => {
           subject: 'Test Email 1',
           text: 'First email',
         }),
-      });
+      })
       await fetch(`http://127.0.0.1:${httpPort}/emails`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -276,97 +281,126 @@ describe('Resend Box Integration', () => {
           subject: 'Test Email 2',
           text: 'Second email',
         }),
-      });
-    });
+      })
+    })
 
     it('should list all emails via GET /sandbox/emails', async () => {
-      const response = await fetch(`http://127.0.0.1:${httpPort}/sandbox/emails`);
-      expect(response.ok).toBe(true);
-      const data = await response.json();
-      expect(data.emails).toBeDefined();
-      expect(Array.isArray(data.emails)).toBe(true);
-      expect(data.emails.length).toBe(2);
-      expect(data.emails[0].subject).toBe('Test Email 2'); // Newest first
-      expect(data.emails[1].subject).toBe('Test Email 1');
-    });
+      const response = await fetch(
+        `http://127.0.0.1:${httpPort}/sandbox/emails`
+      )
+      expect(response.ok).toBe(true)
+      const data = await response.json()
+      expect(data.emails).toBeDefined()
+      expect(Array.isArray(data.emails)).toBe(true)
+      expect(data.emails.length).toBe(2)
+      expect(data.emails[0].subject).toBe('Test Email 2') // Newest first
+      expect(data.emails[1].subject).toBe('Test Email 1')
+    })
 
     it('should return emails in reverse chronological order', async () => {
-      const response = await fetch(`http://127.0.0.1:${httpPort}/sandbox/emails`);
-      const data = await response.json();
-      const emails = data.emails;
+      const response = await fetch(
+        `http://127.0.0.1:${httpPort}/sandbox/emails`
+      )
+      const data = await response.json()
+      const emails = data.emails
       for (let i = 0; i < emails.length - 1; i++) {
-        expect(emails[i].createdAt).toBeGreaterThanOrEqual(emails[i + 1].createdAt);
+        expect(emails[i].createdAt).toBeGreaterThanOrEqual(
+          emails[i + 1].createdAt
+        )
       }
-    });
+    })
 
     it('should get a specific email via GET /sandbox/emails/:id', async () => {
-      const listResponse = await fetch(`http://127.0.0.1:${httpPort}/sandbox/emails`);
-      const listData = await listResponse.json();
-      const emailId = listData.emails[0].id;
+      const listResponse = await fetch(
+        `http://127.0.0.1:${httpPort}/sandbox/emails`
+      )
+      const listData = await listResponse.json()
+      const emailId = listData.emails[0].id
 
-      const response = await fetch(`http://127.0.0.1:${httpPort}/sandbox/emails/${emailId}`);
-      expect(response.ok).toBe(true);
-      const data = await response.json();
-      expect(data.email).toBeDefined();
-      expect(data.email.id).toBe(emailId);
-      expect(data.email.subject).toBe('Test Email 2');
-    });
+      const response = await fetch(
+        `http://127.0.0.1:${httpPort}/sandbox/emails/${emailId}`
+      )
+      expect(response.ok).toBe(true)
+      const data = await response.json()
+      expect(data.email).toBeDefined()
+      expect(data.email.id).toBe(emailId)
+      expect(data.email.subject).toBe('Test Email 2')
+    })
 
     it('should return 404 for non-existent email', async () => {
-      const response = await fetch(`http://127.0.0.1:${httpPort}/sandbox/emails/nonexistent-id`);
-      expect(response.status).toBe(404);
-      const data = await response.json();
-      expect(data.error).toBe('Email not found');
-    });
+      const response = await fetch(
+        `http://127.0.0.1:${httpPort}/sandbox/emails/nonexistent-id`
+      )
+      expect(response.status).toBe(404)
+      const data = await response.json()
+      expect(data.error).toBe('Email not found')
+    })
 
     it('should delete a specific email via DELETE /sandbox/emails/:id', async () => {
-      const listResponse = await fetch(`http://127.0.0.1:${httpPort}/sandbox/emails`);
-      const listData = await listResponse.json();
-      const emailId = listData.emails[0].id;
+      const listResponse = await fetch(
+        `http://127.0.0.1:${httpPort}/sandbox/emails`
+      )
+      const listData = await listResponse.json()
+      const emailId = listData.emails[0].id
 
-      const deleteResponse = await fetch(`http://127.0.0.1:${httpPort}/sandbox/emails/${emailId}`, {
-        method: 'DELETE',
-      });
-      expect(deleteResponse.ok).toBe(true);
+      const deleteResponse = await fetch(
+        `http://127.0.0.1:${httpPort}/sandbox/emails/${emailId}`,
+        {
+          method: 'DELETE',
+        }
+      )
+      expect(deleteResponse.ok).toBe(true)
 
-      const getResponse = await fetch(`http://127.0.0.1:${httpPort}/sandbox/emails/${emailId}`);
-      expect(getResponse.status).toBe(404);
-    });
+      const getResponse = await fetch(
+        `http://127.0.0.1:${httpPort}/sandbox/emails/${emailId}`
+      )
+      expect(getResponse.status).toBe(404)
+    })
 
     it('should return 404 when deleting non-existent email', async () => {
-      const response = await fetch(`http://127.0.0.1:${httpPort}/sandbox/emails/nonexistent-id`, {
-        method: 'DELETE',
-      });
-      expect(response.status).toBe(404);
-    });
+      const response = await fetch(
+        `http://127.0.0.1:${httpPort}/sandbox/emails/nonexistent-id`,
+        {
+          method: 'DELETE',
+        }
+      )
+      expect(response.status).toBe(404)
+    })
 
     it('should clear all emails via DELETE /sandbox/emails', async () => {
-      const deleteResponse = await fetch(`http://127.0.0.1:${httpPort}/sandbox/emails`, {
-        method: 'DELETE',
-      });
-      expect(deleteResponse.ok).toBe(true);
+      const deleteResponse = await fetch(
+        `http://127.0.0.1:${httpPort}/sandbox/emails`,
+        {
+          method: 'DELETE',
+        }
+      )
+      expect(deleteResponse.ok).toBe(true)
 
-      const listResponse = await fetch(`http://127.0.0.1:${httpPort}/sandbox/emails`);
-      const listData = await listResponse.json();
-      expect(listData.emails.length).toBe(0);
-    });
+      const listResponse = await fetch(
+        `http://127.0.0.1:${httpPort}/sandbox/emails`
+      )
+      const listData = await listResponse.json()
+      expect(listData.emails.length).toBe(0)
+    })
 
     it('should handle empty email list', async () => {
       // Clear emails first
       await fetch(`http://127.0.0.1:${httpPort}/sandbox/emails`, {
         method: 'DELETE',
-      });
+      })
 
-      const response = await fetch(`http://127.0.0.1:${httpPort}/sandbox/emails`);
-      expect(response.ok).toBe(true);
-      const data = await response.json();
-      expect(data.emails).toEqual([]);
-    });
-  });
+      const response = await fetch(
+        `http://127.0.0.1:${httpPort}/sandbox/emails`
+      )
+      expect(response.ok).toBe(true)
+      const data = await response.json()
+      expect(data.emails).toEqual([])
+    })
+  })
 
   describe('Edge Cases', () => {
     it('should handle large email payloads', async () => {
-      const largeText = 'x'.repeat(100000); // 100KB of text
+      const largeText = 'x'.repeat(100000) // 100KB of text
       const response = await fetch(`http://127.0.0.1:${httpPort}/emails`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -376,12 +410,12 @@ describe('Resend Box Integration', () => {
           subject: 'Large Email',
           text: largeText,
         }),
-      });
+      })
 
-      expect(response.ok).toBe(true);
-      const email = store.emails.find((e) => e.subject === 'Large Email');
-      expect(email?.text?.length).toBe(100000);
-    });
+      expect(response.ok).toBe(true)
+      const email = store.emails.find((e) => e.subject === 'Large Email')
+      expect(email?.text?.length).toBe(100000)
+    })
 
     it('should handle emails with special characters in subject', async () => {
       const response = await fetch(`http://127.0.0.1:${httpPort}/emails`, {
@@ -393,12 +427,12 @@ describe('Resend Box Integration', () => {
           subject: 'Email with "quotes" & <tags> & émojis 🎉',
           text: 'Test',
         }),
-      });
+      })
 
-      expect(response.ok).toBe(true);
-      const email = store.emails.find((e) => e.subject.includes('émojis'));
-      expect(email?.subject).toBe('Email with "quotes" & <tags> & émojis 🎉');
-    });
+      expect(response.ok).toBe(true)
+      const email = store.emails.find((e) => e.subject.includes('émojis'))
+      expect(email?.subject).toBe('Email with "quotes" & <tags> & émojis 🎉')
+    })
 
     it('should handle missing optional fields gracefully', async () => {
       const response = await fetch(`http://127.0.0.1:${httpPort}/emails`, {
@@ -410,14 +444,13 @@ describe('Resend Box Integration', () => {
           subject: 'Minimal Email',
           // No text or html
         }),
-      });
+      })
 
-      expect(response.ok).toBe(true);
-      const email = store.emails.find((e) => e.subject === 'Minimal Email');
-      expect(email).toBeDefined();
-      expect(email?.text).toBeUndefined();
-      expect(email?.html).toBeUndefined();
-    });
-  });
-});
-
+      expect(response.ok).toBe(true)
+      const email = store.emails.find((e) => e.subject === 'Minimal Email')
+      expect(email).toBeDefined()
+      expect(email?.text).toBeUndefined()
+      expect(email?.html).toBeUndefined()
+    })
+  })
+})

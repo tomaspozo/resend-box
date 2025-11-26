@@ -1,26 +1,26 @@
-import { useState } from "react";
-import { Copy, Check, Mail } from "lucide-react";
+import { useState } from 'react'
+import { Copy, Check, Mail } from 'lucide-react'
 
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { API_BADGE_CLASSES, SMTP_BADGE_CLASSES } from "@/lib/constants";
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
+import { API_BADGE_CLASSES, SMTP_BADGE_CLASSES } from '@/lib/constants'
 
-import type { Email } from "@/types";
+import type { Email } from '@/types'
 
 interface EmailDetailProps {
-  email: Email | null;
-  onDelete?: (id: string) => void;
+  email: Email | null
+  onDelete?: (id: string) => void
 }
 
 const copyToClipboard = async (text: string): Promise<boolean> => {
   try {
-    await navigator.clipboard.writeText(text);
-    return true;
+    await navigator.clipboard.writeText(text)
+    return true
   } catch {
-    return false;
+    return false
   }
-};
+}
 
 /**
  * Formats headers for display, converting objects and arrays to readable strings
@@ -28,54 +28,54 @@ const copyToClipboard = async (text: string): Promise<boolean> => {
 const formatHeaders = (
   headers: Record<string, unknown> | undefined
 ): string => {
-  if (!headers) return "{}";
+  if (!headers) return '{}'
 
-  const formatted: Record<string, string> = {};
+  const formatted: Record<string, string> = {}
 
   for (const [key, value] of Object.entries(headers)) {
     if (value === null || value === undefined) {
-      formatted[key] = String(value);
+      formatted[key] = String(value)
     } else if (Array.isArray(value)) {
-      formatted[key] = value.map((v) => formatValue(v)).join(", ");
-    } else if (typeof value === "object") {
+      formatted[key] = value.map((v) => formatValue(v)).join(', ')
+    } else if (typeof value === 'object') {
       // Handle objects - try to extract meaningful data
-      formatted[key] = formatValue(value);
+      formatted[key] = formatValue(value)
     } else {
-      formatted[key] = String(value);
+      formatted[key] = String(value)
     }
   }
 
-  return JSON.stringify(formatted, null, 2);
-};
+  return JSON.stringify(formatted, null, 2)
+}
 
 /**
  * Formats a single header value, handling objects and arrays
  */
 const formatValue = (value: unknown): string => {
   if (value === null || value === undefined) {
-    return String(value);
+    return String(value)
   }
 
-  if (typeof value === "string") {
-    return value;
+  if (typeof value === 'string') {
+    return value
   }
 
-  if (typeof value === "number" || typeof value === "boolean") {
-    return String(value);
+  if (typeof value === 'number' || typeof value === 'boolean') {
+    return String(value)
   }
 
   if (Array.isArray(value)) {
-    return value.map((v) => formatValue(v)).join(", ");
+    return value.map((v) => formatValue(v)).join(', ')
   }
 
-  if (typeof value === "object") {
+  if (typeof value === 'object') {
     // Try to extract meaningful properties from common email header objects
-    const obj = value as Record<string, unknown>;
+    const obj = value as Record<string, unknown>
 
     // Handle address objects (common in email headers)
-    if (obj.address && typeof obj.address === "string") {
-      const name = obj.name ? `${obj.name} <${obj.address}>` : obj.address;
-      return name;
+    if (obj.address && typeof obj.address === 'string') {
+      const name = obj.name ? `${obj.name} <${obj.address}>` : obj.address
+      return name
     }
 
     // Handle objects with value property (mailparser format)
@@ -83,49 +83,47 @@ const formatValue = (value: unknown): string => {
       if (Array.isArray(obj.value)) {
         return obj.value
           .map((v: unknown) => {
-            if (typeof v === "object" && v !== null && "address" in v) {
-              const addr = v as { address: string; name?: string };
-              return addr.name
-                ? `${addr.name} <${addr.address}>`
-                : addr.address;
+            if (typeof v === 'object' && v !== null && 'address' in v) {
+              const addr = v as { address: string; name?: string }
+              return addr.name ? `${addr.name} <${addr.address}>` : addr.address
             }
-            return formatValue(v);
+            return formatValue(v)
           })
-          .join(", ");
+          .join(', ')
       }
-      return formatValue(obj.value);
+      return formatValue(obj.value)
     }
 
     // Handle mailparser header objects that might have text property
-    if (obj.text && typeof obj.text === "string") {
-      return obj.text;
+    if (obj.text && typeof obj.text === 'string') {
+      return obj.text
     }
 
     // Handle objects with html property
-    if (obj.html && typeof obj.html === "string") {
-      return obj.html;
+    if (obj.html && typeof obj.html === 'string') {
+      return obj.html
     }
 
     // Try to extract all string properties and join them
-    const stringProps: string[] = [];
+    const stringProps: string[] = []
     for (const [k, v] of Object.entries(obj)) {
-      if (typeof v === "string") {
-        stringProps.push(`${k}: ${v}`);
-      } else if (typeof v === "object" && v !== null) {
+      if (typeof v === 'string') {
+        stringProps.push(`${k}: ${v}`)
+      } else if (typeof v === 'object' && v !== null) {
         // Recursively format nested objects
-        stringProps.push(`${k}: ${formatValue(v)}`);
+        stringProps.push(`${k}: ${formatValue(v)}`)
       }
     }
     if (stringProps.length > 0) {
-      return stringProps.join("; ");
+      return stringProps.join('; ')
     }
 
     // For other objects, try to stringify
     try {
-      const stringified = JSON.stringify(value, null, 2);
+      const stringified = JSON.stringify(value, null, 2)
       // If JSON.stringify returns something meaningful (not just {}), use it
-      if (stringified && stringified !== "{}" && stringified !== "[]") {
-        return stringified;
+      if (stringified && stringified !== '{}' && stringified !== '[]') {
+        return stringified
       }
     } catch {
       // Fall through to final return
@@ -134,17 +132,17 @@ const formatValue = (value: unknown): string => {
     // Last resort: try to find any meaningful string representation
     // Check if object has a toString method that's not the default
     if (value.toString && value.toString !== Object.prototype.toString) {
-      const str = value.toString();
-      if (str && str !== "[object Object]") {
-        return str;
+      const str = value.toString()
+      if (str && str !== '[object Object]') {
+        return str
       }
     }
   }
 
   // Final fallback - but this should rarely be hit
-  const str = String(value);
-  return str === "[object Object]" ? JSON.stringify(value) : str;
-};
+  const str = String(value)
+  return str === '[object Object]' ? JSON.stringify(value) : str
+}
 
 /**
  * Processes HTML content to make all links open in a new tab
@@ -153,25 +151,25 @@ const formatValue = (value: unknown): string => {
  */
 const processHtmlForIframe = (html: string): string => {
   // Use DOMParser if available (browser environment)
-  if (typeof DOMParser !== "undefined") {
-    const parser = new DOMParser();
+  if (typeof DOMParser !== 'undefined') {
+    const parser = new DOMParser()
     // Check if HTML is a full document or just a fragment
-    const isFullDocument = /^\s*<!DOCTYPE|^\s*<html/i.test(html);
-    const doc = parser.parseFromString(html, "text/html");
-    const links = doc.querySelectorAll("a");
+    const isFullDocument = /^\s*<!DOCTYPE|^\s*<html/i.test(html)
+    const doc = parser.parseFromString(html, 'text/html')
+    const links = doc.querySelectorAll('a')
 
     links.forEach((link) => {
-      link.setAttribute("target", "_blank");
+      link.setAttribute('target', '_blank')
       // Preserve existing rel attributes and add noopener noreferrer
-      const existingRel = link.getAttribute("rel") || "";
-      const relParts = existingRel.split(/\s+/).filter(Boolean);
-      if (!relParts.includes("noopener")) relParts.push("noopener");
-      if (!relParts.includes("noreferrer")) relParts.push("noreferrer");
-      link.setAttribute("rel", relParts.join(" "));
-    });
+      const existingRel = link.getAttribute('rel') || ''
+      const relParts = existingRel.split(/\s+/).filter(Boolean)
+      if (!relParts.includes('noopener')) relParts.push('noopener')
+      if (!relParts.includes('noreferrer')) relParts.push('noreferrer')
+      link.setAttribute('rel', relParts.join(' '))
+    })
 
     // Inject the click interceptor script
-    const scriptElement = doc.createElement("script");
+    const scriptElement = doc.createElement('script')
     scriptElement.textContent = `
       (function() {
         document.addEventListener('click', function(e) {
@@ -184,30 +182,30 @@ const processHtmlForIframe = (html: string): string => {
           }
         }, true);
       })();
-    `;
+    `
 
     // Ensure we have a head element to inject the script
-    let head = doc.head;
+    let head = doc.head
     if (!head) {
-      head = doc.createElement("head");
-      const htmlElement = doc.documentElement;
-      const bodyElement = doc.body;
+      head = doc.createElement('head')
+      const htmlElement = doc.documentElement
+      const bodyElement = doc.body
       if (htmlElement) {
         if (bodyElement) {
-          htmlElement.insertBefore(head, bodyElement);
+          htmlElement.insertBefore(head, bodyElement)
         } else {
-          htmlElement.appendChild(head);
+          htmlElement.appendChild(head)
         }
       }
     }
-    head.appendChild(scriptElement);
+    head.appendChild(scriptElement)
 
     // Return full document structure if original was a full document, otherwise just body content
     if (isFullDocument) {
-      return doc.documentElement.outerHTML;
+      return doc.documentElement.outerHTML
     }
-    const body = doc.body;
-    return body ? body.innerHTML : doc.documentElement.innerHTML;
+    const body = doc.body
+    return body ? body.innerHTML : doc.documentElement.innerHTML
   }
 
   // Fallback: regex-based approach for environments without DOMParser
@@ -219,10 +217,10 @@ const processHtmlForIframe = (html: string): string => {
       attributes = attributes.replace(
         /\btarget\s*=\s*["'][^"']*["']/gi,
         'target="_blank"'
-      );
+      )
     } else {
       // Add target attribute
-      attributes = `${attributes} target="_blank"`;
+      attributes = `${attributes} target="_blank"`
     }
 
     // Check if rel already exists
@@ -233,56 +231,56 @@ const processHtmlForIframe = (html: string): string => {
           /\brel\s*=\s*["']([^"']*)["']/gi,
           (_relMatch: string, relValue: string) =>
             `rel="${relValue} noopener noreferrer"`
-        );
+        )
       }
     } else {
       // Add rel attribute
-      attributes = `${attributes} rel="noopener noreferrer"`;
+      attributes = `${attributes} rel="noopener noreferrer"`
     }
 
-    return `<a ${attributes}>`;
-  });
-};
+    return `<a ${attributes}>`
+  })
+}
 
 export const EmailDetail = ({ email }: EmailDetailProps) => {
-  const [copiedId, setCopiedId] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState("preview");
+  const [copiedId, setCopiedId] = useState<string | null>(null)
+  const [activeTab, setActiveTab] = useState('preview')
 
-  if (!email) return null;
+  if (!email) return null
 
   const handleCopy = async (text: string, id: string) => {
-    const success = await copyToClipboard(text);
+    const success = await copyToClipboard(text)
     if (success) {
-      setCopiedId(id);
-      setTimeout(() => setCopiedId(null), 2000);
+      setCopiedId(id)
+      setTimeout(() => setCopiedId(null), 2000)
     }
-  };
+  }
 
   const getContentForActiveTab = (): string | null => {
     switch (activeTab) {
-      case "preview":
-        return email.html || email.text || null;
-      case "text":
-        return email.text || null;
-      case "html":
-        return email.html || null;
-      case "request":
+      case 'preview':
+        return email.html || email.text || null
+      case 'text':
+        return email.text || null
+      case 'html':
+        return email.html || null
+      case 'request':
         // Request tab has separate copy buttons, so main copy button is disabled
-        return null;
+        return null
       default:
-        return null;
+        return null
     }
-  };
+  }
 
   const hasContentForActiveTab = (): boolean => {
     // Request tab has separate copy buttons, so main copy button is disabled
-    if (activeTab === "request") {
-      return false;
+    if (activeTab === 'request') {
+      return false
     }
-    return getContentForActiveTab() !== null;
-  };
+    return getContentForActiveTab() !== null
+  }
 
-  const isResend = email.source === "resend";
+  const isResend = email.source === 'resend'
 
   return (
     <div className="flex flex-col h-full">
@@ -300,7 +298,7 @@ export const EmailDetail = ({ email }: EmailDetailProps) => {
               variant="outline"
               className={isResend ? API_BADGE_CLASSES : SMTP_BADGE_CLASSES}
             >
-              {isResend ? "API" : "SMTP"}
+              {isResend ? 'API' : 'SMTP'}
             </Badge>
           </div>
         </div>
@@ -354,22 +352,22 @@ export const EmailDetail = ({ email }: EmailDetailProps) => {
               <TabsTrigger value="request">Request</TabsTrigger>
             </TabsList>
           </Tabs>
-          {activeTab !== "request" && (
+          {activeTab !== 'request' && (
             <Button
               variant="ghost"
               size="icon"
               onClick={() => {
-                const content = getContentForActiveTab();
+                const content = getContentForActiveTab()
                 if (content) {
-                  handleCopy(content, "content");
+                  handleCopy(content, 'content')
                 }
               }}
               disabled={!hasContentForActiveTab()}
               title={
-                hasContentForActiveTab() ? "Copy content" : "No content to copy"
+                hasContentForActiveTab() ? 'Copy content' : 'No content to copy'
               }
             >
-              {copiedId === "content" ? (
+              {copiedId === 'content' ? (
                 <Check className="h-4 w-4 text-green-600" />
               ) : (
                 <Copy className="h-4 w-4" />
@@ -393,7 +391,7 @@ export const EmailDetail = ({ email }: EmailDetailProps) => {
                     sandbox="allow-same-origin allow-scripts allow-popups allow-popups-to-escape-sandbox"
                     title="Email preview"
                     style={{
-                      display: "block",
+                      display: 'block',
                     }}
                   />
                 </div>
@@ -437,7 +435,7 @@ export const EmailDetail = ({ email }: EmailDetailProps) => {
             </TabsContent>
             <TabsContent value="request" className="mt-0 h-full">
               <div className="space-y-4">
-                {email.source === "resend" && email.raw?.request ? (
+                {email.source === 'resend' && email.raw?.request ? (
                   <>
                     {/* Resend API Request Payload */}
                     {email.raw.request.payload && (
@@ -452,15 +450,15 @@ export const EmailDetail = ({ email }: EmailDetailProps) => {
                                 email.raw?.request?.payload,
                                 null,
                                 2
-                              );
+                              )
                               if (payload) {
-                                handleCopy(payload, "payload");
+                                handleCopy(payload, 'payload')
                               }
                             }}
                             disabled={!email.raw?.request?.payload}
                             title="Copy payload"
                           >
-                            {copiedId === "payload" ? (
+                            {copiedId === 'payload' ? (
                               <Check className="h-4 w-4 text-green-600" />
                             ) : (
                               <Copy className="h-4 w-4" />
@@ -483,15 +481,15 @@ export const EmailDetail = ({ email }: EmailDetailProps) => {
                             onClick={() => {
                               const headers = formatHeaders(
                                 email.raw?.request?.headers
-                              );
+                              )
                               if (headers) {
-                                handleCopy(headers, "request-headers");
+                                handleCopy(headers, 'request-headers')
                               }
                             }}
                             disabled={!email.raw?.request?.headers}
                             title="Copy headers"
                           >
-                            {copiedId === "request-headers" ? (
+                            {copiedId === 'request-headers' ? (
                               <Check className="h-4 w-4 text-green-600" />
                             ) : (
                               <Copy className="h-4 w-4" />
@@ -515,15 +513,15 @@ export const EmailDetail = ({ email }: EmailDetailProps) => {
                             variant="ghost"
                             size="icon"
                             onClick={() => {
-                              const headers = formatHeaders(email.raw?.headers);
+                              const headers = formatHeaders(email.raw?.headers)
                               if (headers) {
-                                handleCopy(headers, "headers");
+                                handleCopy(headers, 'headers')
                               }
                             }}
                             disabled={!email.raw?.headers}
                             title="Copy headers"
                           >
-                            {copiedId === "headers" ? (
+                            {copiedId === 'headers' ? (
                               <Check className="h-4 w-4 text-green-600" />
                             ) : (
                               <Copy className="h-4 w-4" />
@@ -545,13 +543,13 @@ export const EmailDetail = ({ email }: EmailDetailProps) => {
                             size="icon"
                             onClick={() => {
                               if (email.raw?.mime) {
-                                handleCopy(email.raw.mime, "mime");
+                                handleCopy(email.raw.mime, 'mime')
                               }
                             }}
                             disabled={!email.raw?.mime}
                             title="Copy MIME"
                           >
-                            {copiedId === "mime" ? (
+                            {copiedId === 'mime' ? (
                               <Check className="h-4 w-4 text-green-600" />
                             ) : (
                               <Copy className="h-4 w-4" />
@@ -565,12 +563,12 @@ export const EmailDetail = ({ email }: EmailDetailProps) => {
                     )}
                   </>
                 )}
-                {email.source === "resend" && !email.raw?.request && (
+                {email.source === 'resend' && !email.raw?.request && (
                   <div className="text-muted-foreground p-4 border rounded">
                     No request data available
                   </div>
                 )}
-                {email.source === "smtp" &&
+                {email.source === 'smtp' &&
                   !email.raw?.headers &&
                   !email.raw?.mime && (
                     <div className="text-muted-foreground p-4 border rounded">
@@ -583,5 +581,5 @@ export const EmailDetail = ({ email }: EmailDetailProps) => {
         </div>
       </div>
     </div>
-  );
-};
+  )
+}

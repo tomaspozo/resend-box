@@ -1,20 +1,20 @@
-import { Send, CheckCircle } from "lucide-react";
+import { Send, CheckCircle } from 'lucide-react'
 
 interface EmailEventsProps {
-  createdAt: number;
+  createdAt: number
 }
 
 const formatDateTime = (timestamp: number): string => {
-  const date = new Date(timestamp);
-  const month = date.toLocaleString("default", { month: "short" });
-  const day = date.getDate();
-  const hours = date.getHours();
-  const minutes = date.getMinutes();
-  const ampm = hours >= 12 ? "PM" : "AM";
-  const displayHours = hours % 12 || 12;
-  const displayMinutes = minutes.toString().padStart(2, "0");
-  return `${month} ${day}, ${displayHours}:${displayMinutes} ${ampm}`;
-};
+  const date = new Date(timestamp)
+  const month = date.toLocaleString('default', { month: 'short' })
+  const day = date.getDate()
+  const hours = date.getHours()
+  const minutes = date.getMinutes()
+  const ampm = hours >= 12 ? 'PM' : 'AM'
+  const displayHours = hours % 12 || 12
+  const displayMinutes = minutes.toString().padStart(2, '0')
+  return `${month} ${day}, ${displayHours}:${displayMinutes} ${ampm}`
+}
 
 export const EmailEvents = ({ createdAt }: EmailEventsProps) => {
   return (
@@ -23,9 +23,9 @@ export const EmailEvents = ({ createdAt }: EmailEventsProps) => {
         className="absolute inset-0 opacity-20"
         style={{
           backgroundImage:
-            "radial-gradient(circle, currentColor 1px, transparent 1px)",
-          backgroundSize: "20px 20px",
-          backgroundPosition: "0 0",
+            'radial-gradient(circle, currentColor 1px, transparent 1px)',
+          backgroundSize: '20px 20px',
+          backgroundPosition: '0 0',
         }}
       />
       <div className="relative">
@@ -62,6 +62,5 @@ export const EmailEvents = ({ createdAt }: EmailEventsProps) => {
         </div>
       </div>
     </div>
-  );
-};
-
+  )
+}

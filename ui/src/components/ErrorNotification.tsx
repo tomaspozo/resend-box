@@ -1,16 +1,16 @@
-import { X } from "lucide-react";
-import { Button } from "./ui/button";
+import { X } from 'lucide-react'
+import { Button } from './ui/button'
 
 interface ErrorNotificationProps {
-  message: string;
-  onDismiss?: () => void;
-  className?: string;
+  message: string
+  onDismiss?: () => void
+  className?: string
 }
 
 export const ErrorNotification = ({
   message,
   onDismiss,
-  className = "",
+  className = '',
 }: ErrorNotificationProps) => {
   return (
     <div
@@ -31,6 +31,5 @@ export const ErrorNotification = ({
         </Button>
       )}
     </div>
-  );
-};
-
+  )
+}
