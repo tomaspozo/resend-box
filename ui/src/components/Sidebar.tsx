@@ -8,19 +8,26 @@ const navigationItems = [
   { id: 'settings', label: 'Settings', icon: Settings, path: '/ui/settings' },
 ]
 
+const getStoredTheme = (): 'light' | 'dark' => {
+  if (typeof window === 'undefined') return 'light'
+  const stored = localStorage.getItem('theme')
+  return (stored === 'dark' || stored === 'light') ? stored : 'light'
+}
+
 export const Sidebar = ({
   currentView: _currentView,
 }: {
   currentView?: string
 }) => {
-  const [theme, setTheme] = useState<'light' | 'dark'>('light')
+  const [theme, setTheme] = useState<'light' | 'dark'>(getStoredTheme)
   const [collapsed, setCollapsed] = useState(false)
   const location = useLocation()
 
   useEffect(() => {
     const root = document.documentElement
-    const isDark = root.classList.contains('dark')
-    setTheme(isDark ? 'dark' : 'light')
+    const storedTheme = getStoredTheme()
+    root.classList.toggle('dark', storedTheme === 'dark')
+    setTheme(storedTheme)
   }, [])
 
   const toggleTheme = () => {
@@ -28,6 +35,9 @@ export const Sidebar = ({
     const newTheme = theme === 'light' ? 'dark' : 'light'
     root.classList.toggle('dark', newTheme === 'dark')
     setTheme(newTheme)
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('theme', newTheme)
+    }
   }
 
   return (
