@@ -280,10 +280,6 @@ curl http://127.0.0.1:4657/sandbox/emails
 curl http://127.0.0.1:4657/sandbox/emails/{email-id}
 ```
 
-## License
-
-MIT
-
 ---
 
 Built with coffee and Cursor by [Tomás Pozo](https://x.com/tomaspozo_)
