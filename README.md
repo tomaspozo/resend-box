@@ -2,7 +2,7 @@
 
 A local email sandbox that acts as both a Resend API mock and an SMTP server, with a modern web UI for inspecting captured emails.
 
-![Resend Box Screenshot](https://raw.githubusercontent.com/yourusername/resend-sandbox/main/docs/screenshot.png)
+![Resend Box Screenshot](https://raw.githubusercontent.com/tomaspozo/resend-box/main/docs/screenshot.png)
 
 ## Features
 
