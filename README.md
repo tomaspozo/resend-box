@@ -18,8 +18,6 @@ A local email sandbox that acts as both a Resend API mock and an SMTP server, wi
 ## Installation
 
 ```bash
-npm install -g resend-box
-# or
 npx resend-box
 ```
 
@@ -74,10 +72,10 @@ You can override ports via CLI flags or environment variables:
 
 ```bash
 # Using CLI flags
-npx resend-box --http-port 3000 --smtp-port 2525
+npx resend-box start --http-port 3000 --smtp-port 2525
 
 # Using environment variables
-RESEND_SANDBOX_HTTP_PORT=3000 RESEND_SANDBOX_SMTP_PORT=2525 npx resend-box
+RESENDBOX_HTTP_PORT=3000 RESENDBOX_SMTP_PORT=2525 npx resend-box
 ```
 
 ### CLI Commands
@@ -91,7 +89,7 @@ npx resend-box init
 npx resend-box init --base-url http://127.0.0.1:3000
 
 # Use custom ports for init
-RESEND_SANDBOX_HTTP_PORT=3000 RESEND_SANDBOX_SMTP_PORT=2525 npx resend-box init
+npx resend-box start --http-port 3000 --smtp-port 2525
 
 # Show help
 npx resend-box --help

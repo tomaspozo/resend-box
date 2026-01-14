@@ -82,7 +82,8 @@ This compiles:
 After building, you can run the production version:
 
 ```bash
-npm start
+npm start         # Start the sandbox
+npm run init      # Configure your project
 ```
 
 Or use the CLI directly:
@@ -135,8 +136,11 @@ npm run build
 # Then start
 npm start
 
+# Initialize a project
+npm run init
+
 # Or with environment variables
-RESEND_SANDBOX_HTTP_PORT=3000 npm start
+RESENDBOX_HTTP_PORT=3000 npm start
 ```
 
 ### Method 3: Development Mode (tsx)
@@ -144,11 +148,8 @@ RESEND_SANDBOX_HTTP_PORT=3000 npm start
 For quick testing without building:
 
 ```bash
-# Install tsx globally (optional, already in devDependencies)
-npm install -g tsx
-
-# Run directly
-tsx src/cli.ts start
+# Run directly using npx (uses tsx from devDependencies)
+npx tsx src/cli.ts start
 ```
 
 ## Configuring Your Project to Use Local Sandbox
@@ -298,5 +299,5 @@ See `.env.example` for available environment variables.
 Key variables:
 
 - `RESEND_BASE_URL`: Used by projects to point Resend SDK to sandbox
-- `RESEND_SANDBOX_HTTP_PORT`: Override HTTP port (default: 4657)
-- `RESEND_SANDBOX_SMTP_PORT`: Override SMTP port (default: 1025)
+- `RESENDBOX_HTTP_PORT`: Override HTTP port (default: 4657)
+- `RESENDBOX_SMTP_PORT`: Override SMTP port (default: 1025)

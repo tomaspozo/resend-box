@@ -22,7 +22,7 @@ if (existsSync(envLocalPath)) {
 }
 
 // Get HTTP port from environment variable, default to 4657
-const httpPort = process.env.RESEND_SANDBOX_HTTP_PORT || '4657'
+const httpPort = process.env.RESENDBOX_HTTP_PORT || '4657'
 
 export default defineConfig({
   plugins: [react(), tailwindcss()],

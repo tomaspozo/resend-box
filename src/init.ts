@@ -50,8 +50,8 @@ const detectSupabaseProject = (cwd: string): boolean => {
  * Gets ports from environment variables with defaults
  */
 const getPorts = (): { httpPort: number; smtpPort: number } => {
-  const httpPort = parseInt(process.env.RESEND_SANDBOX_HTTP_PORT || '4657', 10)
-  const smtpPort = parseInt(process.env.RESEND_SANDBOX_SMTP_PORT || '1025', 10)
+  const httpPort = parseInt(process.env.RESENDBOX_HTTP_PORT || '4657', 10)
+  const smtpPort = parseInt(process.env.RESENDBOX_SMTP_PORT || '1025', 10)
 
   return {
     httpPort: isNaN(httpPort) ? 4657 : httpPort,

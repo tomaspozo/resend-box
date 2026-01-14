@@ -65,8 +65,8 @@ Examples:
   $ resend-box --smtp-port 2525   Start with custom SMTP port
 
 Environment Variables:
-  RESEND_SANDBOX_HTTP_PORT  Override HTTP port (default: 4657)
-  RESEND_SANDBOX_SMTP_PORT   Override SMTP port (default: 1025)
+  RESENDBOX_HTTP_PORT  Override HTTP port (default: 4657)
+  RESENDBOX_SMTP_PORT   Override SMTP port (default: 1025)
   `
   )
 
@@ -75,7 +75,7 @@ program
   .description('Initialize Resend Box configuration in your project')
   .option(
     '--base-url <url>',
-    'Custom base URL for Resend API (uses RESEND_SANDBOX_HTTP_PORT if not provided)',
+    'Custom base URL for Resend API (uses RESENDBOX_HTTP_PORT if not provided)',
     undefined
   )
   .addHelpText(
@@ -85,14 +85,14 @@ This command will:
   • Check for .env.local or .env in the current directory
   • Add or update RESEND_BASE_URL and SMTP environment variables
   • Update config.toml with SMTP settings (if Supabase project detected)
-  • Use ports from RESEND_SANDBOX_HTTP_PORT and RESEND_SANDBOX_SMTP_PORT env vars
+  • Use ports from RESENDBOX_HTTP_PORT and RESENDBOX_SMTP_PORT env vars
   • Detect SMTP host context (host.docker.internal for Supabase/Docker, 127.0.0.1 for local)
   • Show interactive confirmation before applying changes
 
 Example:
   $ resend-box init
   $ resend-box init --base-url http://127.0.0.1:3000
-  $ RESEND_SANDBOX_HTTP_PORT=3000 RESEND_SANDBOX_SMTP_PORT=2525 resend-box init
+  $ RESENDBOX_HTTP_PORT=3000 RESENDBOX_SMTP_PORT=2525 resend-box init
   `
   )
   .action(async (options) => {
@@ -113,12 +113,12 @@ program
   .option(
     '--http-port <port>',
     'HTTP port for API and UI',
-    process.env.RESEND_SANDBOX_HTTP_PORT || '4657'
+    process.env.RESENDBOX_HTTP_PORT || '4657'
   )
   .option(
     '--smtp-port <port>',
     'SMTP port',
-    process.env.RESEND_SANDBOX_SMTP_PORT || '1025'
+    process.env.RESENDBOX_SMTP_PORT || '1025'
   )
   .addHelpText(
     'after',
@@ -129,20 +129,20 @@ The sandbox provides:
   • SMTP server at 127.0.0.1:<smtp-port>
 
 Ports can be set via CLI flags or environment variables:
-  RESEND_SANDBOX_HTTP_PORT  (default: 4657)
-  RESEND_SANDBOX_SMTP_PORT  (default: 1025)
+  RESENDBOX_HTTP_PORT  (default: 4657)
+  RESENDBOX_SMTP_PORT  (default: 1025)
   `
   )
   .action(async (options) => {
     try {
       const httpPort = parsePort(
         options.httpPort,
-        process.env.RESEND_SANDBOX_HTTP_PORT,
+        process.env.RESENDBOX_HTTP_PORT,
         4657
       )
       const smtpPort = parsePort(
         options.smtpPort,
-        process.env.RESEND_SANDBOX_SMTP_PORT,
+        process.env.RESENDBOX_SMTP_PORT,
         1025
       )
 
