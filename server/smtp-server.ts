@@ -264,14 +264,14 @@ export const createSmtpServer = (
 
   // Handle socket-level errors (before onConnect is called)
   listener.on('error', (error: NodeJS.ErrnoException) => {
-    console.error('❌ SMTP listener error:', error.message)
-    console.error('   Error code:', error.code)
-    console.error('   Error syscall:', error.syscall)
-    if ('address' in error) {
-      console.error('   Error address:', error.address)
-    }
-    if ('port' in error) {
-      console.error('   Error port:', error.port)
+    if (error.code === 'EADDRINUSE') {
+      console.error(
+        `❌ Port ${port} is already in use. Try a different port with --smtp-port`
+      )
+      process.exit(1)
+    } else {
+      console.error('❌ SMTP listener error:', error.message)
+      console.error('   Error code:', error.code)
     }
   })
 
