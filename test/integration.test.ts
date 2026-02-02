@@ -4,17 +4,18 @@
  */
 
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest'
-import { createStore } from '../src/store.js'
-import { createResendApiServer } from '../src/resend-api.js'
-import { createSmtpServer } from '../src/smtp-server.js'
-import { createWebApiServer } from '../src/web-api.js'
-import type { EmailStore } from '../src/types.js'
+import { createStore } from '../server/store.js'
+import { createResendApiServer } from '../server/resend-api.js'
+import { createSmtpServer } from '../server/smtp-server.js'
+import { createWebApiServer } from '../server/web-api.js'
+import type { EmailStore } from '../server/types.js'
 import express from 'express'
 import type { Server } from 'http'
 import { createConnection } from 'net'
 
 /**
  * Helper function to send an email via SMTP
+ * Uses a simple state machine to track the SMTP conversation
  */
 const sendSmtpEmail = async (
   port: number,
@@ -28,57 +29,95 @@ const sendSmtpEmail = async (
 ): Promise<void> => {
   return new Promise((resolve, reject) => {
     const client = createConnection({ port, host: '127.0.0.1' })
-    let data = ''
+    let buffer = ''
+    let state: 'greeting' | 'ehlo' | 'mail' | 'rcpt' | 'data' | 'body' | 'quit' =
+      'greeting'
+
+    const processResponse = (response: string) => {
+      const code = response.substring(0, 3)
+      const isMultiline = response[3] === '-'
+
+      // Skip multiline responses until we get the final one
+      if (isMultiline) return
+
+      if (code.startsWith('5') || code.startsWith('4')) {
+        client.end()
+        reject(new Error(`SMTP error: ${response}`))
+        return
+      }
+
+      switch (state) {
+        case 'greeting':
+          if (code === '220') {
+            state = 'ehlo'
+            client.write('EHLO localhost\r\n')
+          }
+          break
+        case 'ehlo':
+          if (code === '250') {
+            state = 'mail'
+            client.write(`MAIL FROM:<${email.from}>\r\n`)
+          }
+          break
+        case 'mail':
+          if (code === '250') {
+            state = 'rcpt'
+            const recipients = Array.isArray(email.to) ? email.to : [email.to]
+            client.write(`RCPT TO:<${recipients[0]}>\r\n`)
+          }
+          break
+        case 'rcpt':
+          if (code === '250') {
+            state = 'data'
+            client.write('DATA\r\n')
+          }
+          break
+        case 'data':
+          if (code === '354') {
+            state = 'body'
+            const recipients = Array.isArray(email.to) ? email.to : [email.to]
+            const lines = [
+              `From: ${email.from}`,
+              `To: ${recipients.join(', ')}`,
+              `Subject: ${email.subject}`,
+            ]
+            if (email.html) {
+              lines.push('Content-Type: text/html; charset=utf-8')
+            }
+            lines.push('', email.html || email.text || '', '.')
+            client.write(lines.join('\r\n') + '\r\n')
+          }
+          break
+        case 'body':
+          if (code === '250') {
+            state = 'quit'
+            client.write('QUIT\r\n')
+          }
+          break
+        case 'quit':
+          if (code === '221') {
+            client.end()
+            resolve()
+          }
+          break
+      }
+    }
 
     client.on('data', (chunk) => {
-      data += chunk.toString()
-      const lines = data.split('\r\n')
-      data = lines.pop() || ''
+      buffer += chunk.toString()
+      const lines = buffer.split('\r\n')
+      buffer = lines.pop() || ''
 
-      const lastLine = lines[lines.length - 1]
-      if (lastLine?.startsWith('220')) {
-        // Server greeting
-        client.write('EHLO 127.0.0.1\r\n')
-      } else if (lastLine?.startsWith('250')) {
-        if (lastLine.includes('EHLO')) {
-          client.write(`MAIL FROM:<${email.from}>\r\n`)
-        } else if (lastLine.includes('MAIL FROM')) {
-          const recipients = Array.isArray(email.to) ? email.to : [email.to]
-          client.write(`RCPT TO:<${recipients[0]}>\r\n`)
-        } else if (lastLine.includes('RCPT TO')) {
-          client.write('DATA\r\n')
-        } else if (lastLine.includes('354')) {
-          // Start data
-          const recipients = Array.isArray(email.to) ? email.to : [email.to]
-          const emailData = [
-            `From: ${email.from}`,
-            `To: ${recipients.join(', ')}`,
-            `Subject: ${email.subject}`,
-            email.html ? `Content-Type: text/html; charset=utf-8` : '',
-            '',
-            email.html || email.text || '',
-            '.',
-            '',
-          ]
-            .filter(Boolean)
-            .join('\r\n')
-          client.write(emailData)
-        } else if (lastLine?.startsWith('250') && lastLine.includes('queued')) {
-          client.write('QUIT\r\n')
-        } else if (lastLine?.startsWith('221')) {
-          client.end()
-          resolve()
-        }
-      } else if (lastLine?.startsWith('5')) {
-        client.end()
-        reject(new Error(`SMTP error: ${lastLine}`))
+      for (const line of lines) {
+        if (line) processResponse(line)
       }
     })
 
     client.on('error', reject)
     client.on('close', () => {
-      if (!data.includes('221')) {
-        resolve() // Assume success if connection closed
+      // If we reached quit state, consider it success
+      if (state === 'quit') {
+        resolve()
       }
     })
 
@@ -261,7 +300,7 @@ describe('Resend Box Integration', () => {
 
   describe('Web API Integration', () => {
     beforeEach(async () => {
-      // Add some test emails
+      // Add some test emails with a small delay to ensure different timestamps
       await fetch(`http://127.0.0.1:${httpPort}/emails`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -272,6 +311,8 @@ describe('Resend Box Integration', () => {
           text: 'First email',
         }),
       })
+      // Small delay to ensure different createdAt timestamps
+      await new Promise((resolve) => setTimeout(resolve, 10))
       await fetch(`http://127.0.0.1:${httpPort}/emails`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
