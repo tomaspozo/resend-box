@@ -12,13 +12,8 @@ This guide explains how to develop, test, and use Resend Box locally without ins
 1. **Clone and install dependencies:**
 
 ```bash
-# Install root dependencies
+# Install all dependencies (root + UI workspace)
 npm install
-
-# Install UI dependencies
-cd ui
-npm install
-cd ..
 ```
 
 ## Development Workflow
@@ -45,18 +40,10 @@ This starts:
 
 #### Option 2: Full Stack Development
 
-Run both backend and UI in development mode:
-
-**Terminal 1 - Backend:**
+Run both backend and UI in development mode with a single command:
 
 ```bash
 npm run dev
-```
-
-**Terminal 2 - UI:**
-
-```bash
-npm run dev:ui
 ```
 
 This starts:
@@ -65,6 +52,13 @@ This starts:
 - UI dev server at `http://127.0.0.1:5173` (or another port if 5173 is taken)
 
 The UI dev server will proxy API requests to the backend automatically.
+
+You can also run them separately if needed:
+
+```bash
+npm run dev:server  # Backend only
+npm run dev:ui      # UI only
+```
 
 ### Building for Production
 
@@ -149,7 +143,7 @@ For quick testing without building:
 
 ```bash
 # Run directly using npx (uses tsx from devDependencies)
-npx tsx src/cli.ts start
+npx tsx server/cli.ts start
 ```
 
 ## Configuring Your Project to Use Local Sandbox
@@ -163,7 +157,7 @@ From your project directory (not the sandbox directory):
 node /path/to/resend-box/dist/cli.js init
 
 # If using tsx
-tsx /path/to/resend-box/src/cli.ts init
+tsx /path/to/resend-box/server/cli.ts init
 ```
 
 This will add `RESEND_BASE_URL=http://127.0.0.1:4657` to your `.env.local` or `.env` file.
@@ -186,21 +180,21 @@ RESEND_BASE_URL=http://127.0.0.1:3000
 
 ```
 resend-box/
-├── src/                 # Backend TypeScript source
+├── server/              # Backend TypeScript source
 │   ├── cli.ts          # CLI entry point
 │   ├── resend-api.ts   # Resend API mock
 │   ├── smtp-server.ts # SMTP server
 │   ├── web-api.ts      # Web API for UI
 │   ├── store.ts        # Email store
 │   └── types.ts        # TypeScript types
-├── ui/                  # React UI application
+├── ui/                  # React UI application (workspace)
 │   └── src/
 │       ├── App.tsx     # Main UI component
 │       ├── api.ts      # API client
 │       └── components/ # UI components
 ├── test/                # Integration tests
 ├── dist/                 # Compiled output (after build)
-└── package.json
+└── package.json         # Workspace root
 ```
 
 ## Development Tips
@@ -256,7 +250,7 @@ node dist/cli.js start --http-port 3000 --smtp-port 2525
 
 ### Backend Changes
 
-1. Edit files in `src/`
+1. Edit files in `server/`
 2. If using `npm run dev`, changes auto-reload
 3. If using built version, run `npm run build` after changes
 
