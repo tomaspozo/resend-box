@@ -35,6 +35,8 @@ export const createWebApiServer = (
   /**
    * GET /sandbox/emails
    * Returns a list of all emails in reverse chronological order (newest first)
+   * Query params:
+   *   - to: Filter by recipient email address (matches any address in the to field)
    * Response: { emails: Email[] }
    */
   app.get(
@@ -44,7 +46,17 @@ export const createWebApiServer = (
       res: Response<WebApiEmailListResponse | WebApiErrorResponse>
     ) => {
       try {
-        const emails = listEmails(store)
+        let emails = listEmails(store)
+
+        // Filter by recipient if 'to' query param is provided
+        const toFilter = req.query.to
+        if (typeof toFilter === 'string' && toFilter.trim()) {
+          const filterAddress = toFilter.trim().toLowerCase()
+          emails = emails.filter((email) =>
+            email.to.some((addr) => addr.toLowerCase().includes(filterAddress))
+          )
+        }
+
         const response: WebApiEmailListResponse = { emails }
         return res.json(response)
       } catch (error) {

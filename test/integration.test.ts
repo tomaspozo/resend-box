@@ -437,6 +437,45 @@ describe('Resend Box Integration', () => {
       const data = await response.json()
       expect(data.emails).toEqual([])
     })
+
+    it('should filter emails by recipient with ?to query param', async () => {
+      // Filter for user1@example.com
+      const response = await fetch(
+        `http://127.0.0.1:${httpPort}/sandbox/emails?to=user1@example.com`
+      )
+      expect(response.ok).toBe(true)
+      const data = await response.json()
+      expect(data.emails.length).toBe(1)
+      expect(data.emails[0].to).toContain('user1@example.com')
+    })
+
+    it('should filter emails by partial recipient match', async () => {
+      // Filter for any @example.com recipient
+      const response = await fetch(
+        `http://127.0.0.1:${httpPort}/sandbox/emails?to=example.com`
+      )
+      expect(response.ok).toBe(true)
+      const data = await response.json()
+      expect(data.emails.length).toBe(2)
+    })
+
+    it('should return empty array when no emails match filter', async () => {
+      const response = await fetch(
+        `http://127.0.0.1:${httpPort}/sandbox/emails?to=nonexistent@domain.com`
+      )
+      expect(response.ok).toBe(true)
+      const data = await response.json()
+      expect(data.emails).toEqual([])
+    })
+
+    it('should filter case-insensitively', async () => {
+      const response = await fetch(
+        `http://127.0.0.1:${httpPort}/sandbox/emails?to=USER1@EXAMPLE.COM`
+      )
+      expect(response.ok).toBe(true)
+      const data = await response.json()
+      expect(data.emails.length).toBe(1)
+    })
   })
 
   describe('Edge Cases', () => {
