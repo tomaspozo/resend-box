@@ -1,6 +1,6 @@
 {
   "name": "resend-box",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Local Resend API mock and SMTP server with web UI for email testing",
   "type": "module",
   "workspaces": [
