@@ -282,4 +282,4 @@ curl http://127.0.0.1:4657/sandbox/emails/{email-id}
 
 ---
 
-Built with coffee and Cursor by [Tomás Pozo](https://x.com/tomaspozo_)
+Built with coffee by [Tomás Pozo](https://x.com/tomaspozo_)
